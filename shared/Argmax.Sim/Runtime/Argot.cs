@@ -84,6 +84,9 @@ namespace Argmax.Sim
         public static readonly string[] ArmyOrders = { "", "attack", "retreat", "merge", "split", "hold", "free" };
         public const int MaxMetaRules = 12;
 
+        /// <summary>Optional: explains where a locked word is learned (the campaign sets this).</summary>
+        public static Func<string, string> LockedHint;
+
         public sealed class Result
         {
             public Program Program;
@@ -115,9 +118,15 @@ namespace Argmax.Sim
 
         // ---------------------------------------------------------------- compiler
 
-        public static Result Compile(string source, string fallbackName = "UNTITLED")
+        /// <summary>
+        /// Compile Argot. With <paramref name="vocab"/>, only those words are accepted: the campaign hands out the
+        /// language one word at a time, the way Turing Complete hands out components.
+        /// </summary>
+        public static Result Compile(string source, string fallbackName = "UNTITLED", ICollection<string> vocab = null)
         {
             var res = new Result();
+            bool Locked(string word) => vocab != null && !vocab.Contains(word);
+            string LockMsg(string where, string word) => where + "'" + word + "' is locked" + (LockedHint != null ? LockedHint(word) : "");
             var chips = new List<ulong>();
             bool meta = false;
             string name = null;
@@ -136,7 +145,7 @@ namespace Argmax.Sim
                 {
                     var parts = raw.Split(new[] { ' ', '\t' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     var d = parts[0].ToLowerInvariant();
-                    if (d == "@meta") { if (chips.Count > 0) res.Errors.Add(where + "@meta must come before any rule"); meta = true; }
+                    if (d == "@meta") { if (Locked("@meta")) { res.Errors.Add(LockMsg(where, "@meta")); continue; } if (chips.Count > 0) res.Errors.Add(where + "@meta must come before any rule"); meta = true; }
                     else if (d == "@unit") meta = false;
                     else if (d == "@name") name = parts.Length > 1 ? Sanitize(parts[1]) : null;
                     else res.Errors.Add(where + "unknown directive " + parts[0]);
@@ -151,8 +160,8 @@ namespace Argmax.Sim
                 int literals = 0;
                 var ctoks = Tokens(cond);
                 int ci = 0;
-                if (ci < ctoks.Count && (ctoks[ci] == "when" || ctoks[ci] == "if")) ci++;
-                else if (ci < ctoks.Count && ctoks[ci] == "always") { ci++; if (ci < ctoks.Count) res.Errors.Add(where + "'always' takes no conditions"); }
+                if (ci < ctoks.Count && (ctoks[ci] == "when" || ctoks[ci] == "if")) { if (Locked("when")) { res.Errors.Add(LockMsg(where, "when")); continue; } ci++; }
+                else if (ci < ctoks.Count && ctoks[ci] == "always") { if (Locked("always")) { res.Errors.Add(LockMsg(where, "always")); continue; } ci++; if (ci < ctoks.Count) res.Errors.Add(where + "'always' takes no conditions"); }
                 else if (ctoks.Count > 0) { res.Errors.Add(where + "a rule starts with 'when', 'if' or 'always'"); continue; }
                 bool expectLit = ctoks.Count > ci;
                 while (ci < ctoks.Count)
@@ -161,8 +170,10 @@ namespace Argmax.Sim
                     string t = ctoks[ci++];
                     if (t == "not" || t == "!") { neg = true; if (ci >= ctoks.Count) { res.Errors.Add(where + "'not' needs a sensor"); break; } t = ctoks[ci++]; }
                     else if (t.StartsWith("!")) { neg = true; t = t.Substring(1); }
+                    if (neg && Locked("not")) { res.Errors.Add(LockMsg(where, "not")); break; }
                     int bit = Array.IndexOf(sensors, t);
                     if (bit < 0) { res.Errors.Add(where + "unknown sensor '" + t + "'" + Suggest(t, sensors)); break; }
+                    if (Locked(t)) { res.Errors.Add(LockMsg(where, t)); break; }
                     if ((mask & (1u << bit)) != 0) { res.Errors.Add(where + "sensor '" + t + "' used twice"); break; }
                     mask |= 1u << bit;
                     if (!neg) want |= 1u << bit;
@@ -170,7 +181,7 @@ namespace Argmax.Sim
                     if (ci < ctoks.Count)
                     {
                         var j = ctoks[ci];
-                        if (j == "and" || j == "&&" || j == "&" || j == ",") ci++;
+                        if (j == "and" || j == "&&" || j == "&" || j == ",") { if (Locked("and")) { res.Errors.Add(LockMsg(where, "and")); break; } ci++; }
                         else { res.Errors.Add(where + "join sensors with 'and' (got '" + j + "')"); break; }
                         if (ci >= ctoks.Count) res.Errors.Add(where + "dangling 'and'");
                     }
@@ -189,6 +200,9 @@ namespace Argmax.Sim
                     else res.Errors.Add(where + "unknown action '" + atoks[0] + "'" + Suggest(atoks[0], new List<string>(table.Keys).ToArray()));
                     continue;
                 }
+                if (Locked(atoks[0])) { res.Errors.Add(LockMsg(where, atoks[0])); continue; }
+                bool argWord = op == Op.Seek || op == Op.Avoid || op == Op.Form || op == Op.Beacon || op == Op.Army;
+                if (argWord && atoks.Count > 1 && Locked(atoks[1])) { res.Errors.Add(LockMsg(where, atoks[1])); continue; }
                 byte arg = 0; int gain = 1; int ai = 1; int argSyms = 0;
                 switch (op)
                 {

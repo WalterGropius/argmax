@@ -1,130 +1,265 @@
-/* ARGMAX: Uplink-style terminal chrome over a neon swarm. */
+/* ARGMAX // MORPHOGENESIS
+   Warm ink and bone, the Bauhaus primaries as accents, square corners and hairlines.
+   Type by role: Michroma (labels, numbers, buttons), Jost (reading), Comfortaa (PROCTOR's voice),
+   Space Mono (code). Futura and Alte Haas Grotesk replace Jost when the player's OS has them.
 
-.root { flex-grow: 1; color: rgb(200, 236, 245); font-size: 13px; }
+   ink      rgb(14, 13, 11)      bone     rgb(236, 228, 211)
+   cobalt   rgb(47, 97, 255)     vermilion rgb(255, 70, 38)     chrome  rgb(244, 194, 13) */
+
+.root { flex-grow: 1; color: rgb(236, 228, 211); font-size: 14px; -unity-font-definition: resource("Argmax/Fonts/Jost"); }
 .screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .hidden { display: none; }
 
-.panel {
-    background-color: rgba(3, 8, 14, 0.86);
-    border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.35);
-    border-radius: 3px;
-    padding: 8px 10px;
+/* roles */
+.label, .panel-title, .btn, .stat-k, .stat-v, .slot-key, .slot-name, .cmp-chip, .cmp-chapter-title, .cmp-node-code,
+.cmp-node-kind, .cmp-obj-title, .cmp-proctor-name, .cmp-concept-k, .cmp-progress, .cmp-chipgroup-title, .field-label,
+.cmp-res-stats, .cmp-runstate, .cursor-hint, .world-label, .menu-label {
+    -unity-font-definition: resource("Argmax/Fonts/Michroma");
 }
-.panel-title { color: rgb(0, 229, 255); -unity-font-style: bold; font-size: 12px; letter-spacing: 2px; margin-bottom: 6px; }
-.dim { color: rgba(170, 210, 225, 0.55); }
-.hot { color: rgb(255, 46, 112); }
-.good { color: rgb(158, 255, 59); }
-.amber { color: rgb(255, 176, 0); }
+.voice, .proctor, .cmp-proctor-text, .cmp-res-outro, .cmp-epi-text, .cmp-story { -unity-font-definition: resource("Argmax/Fonts/Comfortaa"); }
+.code, .cmp-source, .rule-line, .ref { -unity-font-definition: resource("Argmax/Fonts/SpaceMono"); }
+
+.panel {
+    background-color: rgba(14, 13, 11, 0.9);
+    border-width: 1px;
+    border-color: rgba(236, 228, 211, 0.13);
+    border-radius: 0;
+    padding: 10px 12px;
+}
+.panel-title {
+    color: rgba(236, 228, 211, 0.62); font-size: 9px; letter-spacing: 3px; margin-bottom: 8px;
+    border-left-width: 6px; border-left-color: rgb(255, 70, 38); padding-left: 7px;
+}
+.dim { color: rgba(236, 228, 211, 0.5); }
+.hot { color: rgb(255, 92, 62); }
+.good { color: rgb(122, 156, 255); }
+.amber { color: rgb(244, 208, 120); }
 .row { flex-direction: row; align-items: center; }
 .grow { flex-grow: 1; }
-.mono { -unity-font-style: normal; }
+.mono { -unity-font-definition: resource("Argmax/Fonts/SpaceMono"); }
 
 /* ---------- menu ---------- */
-.menu { align-items: center; justify-content: center; background-color: rgba(1, 3, 6, 0.55); }
-.menu-box { width: 760px; max-width: 96%; }
-.logo { font-size: 64px; color: rgb(0, 229, 255); -unity-font-style: bold; letter-spacing: 18px; -unity-text-align: middle-center; margin-bottom: 0; }
-.tagline { -unity-text-align: middle-center; color: rgba(200, 236, 245, 0.7); margin-bottom: 14px; letter-spacing: 1px; }
+.menu { align-items: center; justify-content: center; background-color: rgba(8, 7, 6, 0.55); }
+.menu-box { width: 800px; max-width: 96%; }
+.menu-hero { height: 190px; margin-bottom: 6px; }
+.logo { display: none; }
+.tagline { color: rgba(236, 228, 211, 0.72); margin: 0 0 16px 4px; font-size: 15px; letter-spacing: 0.5px; }
 .menu-grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
-.menu-card { width: 49%; margin-bottom: 8px; }
-.menu-card .panel-title { margin-bottom: 2px; }
+.menu-card { width: 49.5%; margin-bottom: 8px; }
+.menu-card .panel-title { margin-bottom: 4px; }
 .menu-card Label { white-space: normal; }
 
 .btn {
-    background-color: rgba(0, 229, 255, 0.08);
+    background-color: rgba(0, 0, 0, 0);
     border-width: 1px;
-    border-color: rgba(0, 229, 255, 0.55);
-    border-radius: 2px;
-    color: rgb(210, 250, 255);
-    padding: 5px 10px;
-    margin: 3px 4px 3px 0;
-    -unity-font-style: bold;
-    transition-duration: 0.08s;
+    border-color: rgba(236, 228, 211, 0.45);
+    border-radius: 0;
+    color: rgb(236, 228, 211);
+    padding: 6px 12px;
+    margin: 3px 5px 3px 0;
+    font-size: 10px;
+    letter-spacing: 2px;
+    transition-duration: 0.12s;
 }
-.btn:hover { background-color: rgba(0, 229, 255, 0.25); border-color: rgb(0, 229, 255); }
-.btn:active { background-color: rgba(0, 229, 255, 0.45); }
-.btn-hot { border-color: rgba(255, 46, 112, 0.7); background-color: rgba(255, 46, 112, 0.1); }
-.btn-hot:hover { background-color: rgba(255, 46, 112, 0.3); border-color: rgb(255, 46, 112); }
-.btn-on { background-color: rgba(0, 229, 255, 0.35); border-color: rgb(0, 229, 255); }
-.btn-small { padding: 2px 6px; font-size: 11px; }
+.btn:hover { background-color: rgb(236, 228, 211); color: rgb(14, 13, 11); border-color: rgb(236, 228, 211); }
+.btn:active { background-color: rgb(244, 194, 13); border-color: rgb(244, 194, 13); color: rgb(14, 13, 11); }
+.btn-hot { background-color: rgb(255, 70, 38); border-color: rgb(255, 70, 38); color: rgb(14, 13, 11); }
+.btn-hot:hover { background-color: rgb(236, 228, 211); border-color: rgb(236, 228, 211); }
+.btn-on { background-color: rgb(47, 97, 255); border-color: rgb(47, 97, 255); color: rgb(236, 228, 211); }
+.btn-small { padding: 3px 7px; font-size: 9px; letter-spacing: 1.5px; }
+.btn:disabled { opacity: 0.3; }
 
 TextField { margin: 2px 4px 2px 0; }
 TextField > .unity-text-field__input, TextField .unity-base-text-field__input {
-    background-color: rgba(0, 12, 20, 0.9);
-    border-color: rgba(0, 229, 255, 0.35);
-    color: rgb(210, 250, 255);
+    background-color: rgba(236, 228, 211, 0.05);
+    border-color: rgba(236, 228, 211, 0.18);
+    border-radius: 0;
+    color: rgb(236, 228, 211);
+    -unity-font-definition: resource("Argmax/Fonts/SpaceMono");
+    font-size: 13px;
 }
-.field-label { width: 70px; color: rgba(170, 210, 225, 0.7); }
+.field-label { width: 76px; color: rgba(236, 228, 211, 0.5); font-size: 9px; letter-spacing: 2px; }
 
 /* ---------- hud ---------- */
-.topbar { position: absolute; left: 10px; right: 10px; top: 8px; flex-direction: row; align-items: center; padding: 6px 10px; }
-.stat { margin-right: 18px; }
-.stat-k { color: rgba(170, 210, 225, 0.55); font-size: 10px; letter-spacing: 1px; }
-.stat-v { font-size: 16px; -unity-font-style: bold; }
-.bar { height: 6px; width: 120px; background-color: rgba(255, 255, 255, 0.08); border-radius: 2px; margin-top: 2px; }
-.bar-fill { height: 6px; border-radius: 2px; background-color: rgb(0, 229, 255); }
-.bar-foe .bar-fill { background-color: rgb(255, 46, 112); }
+.topbar { position: absolute; left: 10px; right: 10px; top: 8px; height: 56px; flex-direction: row; align-items: center; padding: 4px 12px; }
+.stat { margin-right: 22px; }
+.stat-k { color: rgba(236, 228, 211, 0.45); font-size: 8px; letter-spacing: 2px; }
+.stat-v { font-size: 15px; margin-top: 2px; }
+.bar { height: 4px; width: 120px; background-color: rgba(236, 228, 211, 0.1); margin-top: 3px; }
+.bar-fill { height: 4px; background-color: rgb(47, 97, 255); }
+.bar-foe .bar-fill { background-color: rgb(255, 70, 38); }
 
-.terminal { position: absolute; right: 10px; top: 64px; width: 380px; max-height: 46%; }
-.terminal-line { white-space: normal; font-size: 12px; margin-bottom: 2px; }
-.inspector { position: absolute; right: 10px; bottom: 120px; width: 380px; }
+.terminal { position: absolute; right: 10px; top: 66px; width: 390px; max-height: 46%; }
+.terminal-line { white-space: normal; font-size: 13px; margin-bottom: 3px; }
+.inspector { position: absolute; right: 10px; bottom: 120px; width: 390px; }
 .jev-grid { flex-direction: row; flex-wrap: wrap; width: 156px; margin-right: 10px; }
 .jev-cell {
     width: 50px; height: 34px; margin: 1px;
-    background-color: rgba(0, 229, 255, 0.05);
-    border-width: 1px; border-color: rgba(0, 229, 255, 0.18);
+    background-color: rgba(236, 228, 211, 0.04);
+    border-width: 1px; border-color: rgba(236, 228, 211, 0.12);
     -unity-text-align: middle-center; font-size: 11px;
+    -unity-font-definition: resource("Argmax/Fonts/Michroma");
 }
-.jev-pick { border-color: rgb(255, 255, 255); }
+.jev-pick { border-color: rgb(244, 194, 13); border-width: 2px; }
 .rule-line { font-size: 11px; white-space: normal; }
-.rule-fired { color: rgb(0, 229, 255); }
-.rule-idle { color: rgba(170, 210, 225, 0.35); }
+.rule-fired { color: rgb(244, 194, 13); }
+.rule-idle { color: rgba(236, 228, 211, 0.3); }
 
-.bottombar { position: absolute; left: 10px; right: 400px; bottom: 8px; padding: 6px 10px; }
+.bottombar { position: absolute; left: 10px; right: 410px; bottom: 8px; padding: 7px 12px; }
 .slot {
-    width: 118px; padding: 4px 6px; margin-right: 4px;
-    background-color: rgba(0, 229, 255, 0.05);
-    border-width: 1px; border-color: rgba(0, 229, 255, 0.25); border-radius: 2px;
+    width: 122px; padding: 5px 7px; margin-right: 4px;
+    background-color: rgba(236, 228, 211, 0.03);
+    border-width: 1px; border-color: rgba(236, 228, 211, 0.16);
 }
-.slot:hover { border-color: rgb(0, 229, 255); }
-.slot-active { background-color: rgba(0, 229, 255, 0.22); border-color: rgb(0, 229, 255); }
-.slot-key { color: rgb(255, 176, 0); font-size: 10px; }
-.slot-name { -unity-font-style: bold; font-size: 12px; }
-.slot-cost { font-size: 10px; color: rgba(170, 210, 225, 0.6); }
-.hint { font-size: 11px; color: rgba(170, 210, 225, 0.5); margin-top: 4px; white-space: normal; }
-.banner { position: absolute; top: 64px; left: 30%; right: 30%; -unity-text-align: middle-center; font-size: 18px; color: rgb(255, 176, 0); -unity-font-style: bold; }
+.slot:hover { border-color: rgb(236, 228, 211); }
+.slot-active { background-color: rgba(47, 97, 255, 0.22); border-color: rgb(47, 97, 255); }
+.slot-key { color: rgb(244, 194, 13); font-size: 8px; letter-spacing: 2px; }
+.slot-name { font-size: 11px; margin-top: 2px; }
+.slot-cost { font-size: 11px; color: rgba(236, 228, 211, 0.5); }
+.hint { font-size: 12px; color: rgba(236, 228, 211, 0.45); margin-top: 4px; white-space: normal; }
+.banner { position: absolute; top: 66px; left: 30%; right: 30%; -unity-text-align: middle-center; font-size: 18px; color: rgb(244, 208, 120); }
 
 /* ---------- editor ---------- */
-.editor { position: absolute; left: 10px; top: 64px; width: 560px; bottom: 120px; }
-.code {
-    flex-grow: 1;
-    font-size: 14px;
-    white-space: normal;
-}
+.editor { position: absolute; left: 10px; top: 66px; width: 560px; bottom: 120px; }
+.code { flex-grow: 1; font-size: 14px; white-space: normal; }
 .code > .unity-text-field__input, .code .unity-base-text-field__input {
     -unity-text-align: upper-left;
-    background-color: rgba(0, 8, 14, 0.95);
-    color: rgb(158, 255, 59);
-    padding: 8px;
+    background-color: rgba(8, 7, 6, 0.96);
+    border-color: rgba(236, 228, 211, 0.1);
+    color: rgb(236, 228, 211);
+    padding: 10px;
     white-space: normal;
+    font-size: 14px;
 }
-.compile-ok { color: rgb(158, 255, 59); white-space: normal; }
-.compile-err { color: rgb(255, 46, 112); white-space: normal; }
-.lib-item { padding: 2px 4px; }
-.lib-item:hover { background-color: rgba(0, 229, 255, 0.12); }
-.ref { font-size: 11px; color: rgba(170, 210, 225, 0.6); white-space: normal; }
+.compile-ok { color: rgb(122, 156, 255); white-space: normal; font-size: 12px; }
+.compile-err { color: rgb(255, 92, 62); white-space: normal; font-size: 12px; }
+.lib-item { padding: 3px 4px; }
+.lib-item:hover { background-color: rgba(236, 228, 211, 0.1); }
+.ref { font-size: 11px; color: rgba(236, 228, 211, 0.55); white-space: normal; }
 
 /* ---------- chambers ---------- */
 .chamber-list { width: 300px; margin-right: 10px; }
-.chamber-item { padding: 6px; margin-bottom: 4px; border-width: 1px; border-color: rgba(0, 229, 255, 0.15); }
-.chamber-item:hover { border-color: rgb(0, 229, 255); }
-.chamber-on { border-color: rgb(255, 176, 0); background-color: rgba(255, 176, 0, 0.08); }
-.proctor { color: rgb(255, 176, 0); white-space: normal; margin-bottom: 3px; }
+.chamber-item { padding: 7px; margin-bottom: 4px; border-width: 1px; border-color: rgba(236, 228, 211, 0.12); }
+.chamber-item:hover { border-color: rgb(236, 228, 211); }
+.chamber-on { border-color: rgb(244, 194, 13); background-color: rgba(244, 194, 13, 0.08); }
+.proctor { color: rgb(244, 208, 120); white-space: normal; margin-bottom: 4px; }
 
 /* ---------- overlays ---------- */
-.endgame { align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.55); }
-.endgame-title { font-size: 72px; letter-spacing: 16px; -unity-font-style: bold; -unity-text-align: middle-center; }
-.toast { position: absolute; bottom: 120px; left: 25%; right: 25%; -unity-text-align: middle-center; color: rgb(210, 250, 255); }
-.select-rect { position: absolute; border-width: 1px; border-color: rgba(0, 229, 255, 0.9); background-color: rgba(0, 229, 255, 0.08); }
-.world-label { color: white; -unity-font-style: bold; -unity-text-align: middle-center; font-size: 12px; }
-.cursor-hint { position: absolute; color: rgb(255, 176, 0); font-size: 12px; }
+.endgame { align-items: center; justify-content: center; background-color: rgba(8, 7, 6, 0.6); }
+.endgame-title { font-size: 72px; letter-spacing: 14px; -unity-text-align: middle-center; -unity-font-definition: resource("Argmax/Fonts/Michroma"); }
+.toast { position: absolute; bottom: 124px; left: 25%; right: 25%; -unity-text-align: middle-center; color: rgb(236, 228, 211); font-size: 14px; }
+.select-rect { position: absolute; border-width: 1px; border-color: rgb(244, 194, 13); background-color: rgba(244, 194, 13, 0.07); }
+.world-label { color: rgb(236, 228, 211); -unity-text-align: middle-center; font-size: 11px; }
+.cursor-hint { position: absolute; color: rgb(244, 194, 13); font-size: 10px; letter-spacing: 2px; }
+
+/* ---------- menu: campaign card ---------- */
+.menu-campaign { margin-bottom: 8px; border-color: rgba(244, 194, 13, 0.55); background-color: rgba(14, 13, 11, 0.92); }
+.menu-campaign .panel-title { border-left-color: rgb(244, 194, 13); color: rgb(244, 194, 13); }
+.menu-campaign-text { white-space: normal; margin-bottom: 6px; font-size: 15px; }
+
+/* ---------- campaign: map ---------- */
+.cmp-map { background-color: rgba(10, 9, 8, 0.9); padding: 18px 24px; }
+.cmp-logo { font-size: 30px; color: rgb(236, 228, 211); letter-spacing: 8px; -unity-font-definition: resource("Argmax/Fonts/Michroma"); }
+.cmp-progress { color: rgb(244, 194, 13); font-size: 11px; letter-spacing: 2px; margin-right: 14px; }
+.cmp-sub { margin-bottom: 10px; font-size: 14px; }
+.cmp-body { flex-grow: 1; flex-direction: row; align-items: stretch; min-height: 0; }
+.cmp-chapters { flex-grow: 1; flex-direction: row; }
+.cmp-chapter {
+    flex-grow: 1; flex-basis: 0; margin-right: 6px; padding: 8px 6px;
+    background-color: rgba(14, 13, 11, 0.75); border-top-width: 6px; border-color: rgba(236, 228, 211, 0.12);
+}
+.cmp-ch-1 { border-top-color: rgb(236, 228, 211); }
+.cmp-ch-2 { border-top-color: rgb(47, 97, 255); }
+.cmp-ch-3 { border-top-color: rgb(244, 194, 13); }
+.cmp-ch-4 { border-top-color: rgb(255, 70, 38); }
+.cmp-ch-5 { border-top-color: rgb(122, 156, 255); }
+.cmp-ch-6 { border-top-color: rgb(236, 228, 211); }
+.cmp-chapter-title { color: rgb(236, 228, 211); font-size: 10px; letter-spacing: 2px; }
+.cmp-chapter-tag { font-size: 12px; margin-bottom: 8px; color: rgba(236, 228, 211, 0.5); }
+.cmp-node {
+    padding: 6px 7px; margin-bottom: 5px; border-width: 1px;
+    border-color: rgba(236, 228, 211, 0.12); background-color: rgba(236, 228, 211, 0.025);
+    transition-duration: 0.1s;
+}
+.cmp-node:hover { border-color: rgb(236, 228, 211); background-color: rgba(236, 228, 211, 0.08); }
+.cmp-node-locked { opacity: 0.28; }
+.cmp-node-done { border-color: rgba(47, 97, 255, 0.7); }
+.cmp-node-next { border-color: rgb(244, 194, 13); background-color: rgba(244, 194, 13, 0.07); }
+.cmp-node-sel { border-color: rgb(236, 228, 211); background-color: rgba(236, 228, 211, 0.12); }
+.cmp-node-code { color: rgb(244, 194, 13); font-size: 9px; width: 30px; letter-spacing: 1px; }
+.cmp-node-title { font-size: 13px; white-space: normal; flex-shrink: 1; }
+.cmp-node-kind { font-size: 7px; color: rgba(236, 228, 211, 0.45); letter-spacing: 2px; }
+.cmp-detail { width: 410px; margin-left: 6px; }
+.cmp-detail-title { color: rgb(236, 228, 211); font-size: 22px; margin-bottom: 8px; white-space: normal; }
+.cmp-story { color: rgba(236, 228, 211, 0.66); white-space: normal; margin-bottom: 10px; font-size: 13px; }
+.cmp-wrap { white-space: normal; }
+.cmp-gap { margin-top: 10px; }
+.cmp-concept-mini { color: rgb(244, 194, 13); margin-top: 8px; }
+.cmp-play { font-size: 12px; padding: 12px; -unity-text-align: middle-center; letter-spacing: 3px; }
+.cmp-foot { height: 118px; margin-top: 8px; align-items: stretch; }
+.cmp-components { width: 260px; margin-left: 6px; }
+.cmp-tools { width: 210px; margin-left: 6px; }
+.cmp-chips { flex-direction: row; flex-wrap: wrap; }
+.cmp-chip {
+    padding: 2px 7px; margin: 2px; font-size: 9px; letter-spacing: 1px; border-width: 1px;
+    border-color: rgba(236, 228, 211, 0.3); background-color: rgba(0, 0, 0, 0); color: rgb(236, 228, 211);
+}
+.cmp-chip:hover { background-color: rgb(236, 228, 211); color: rgb(14, 13, 11); }
+.cmp-chip-new { border-color: rgb(244, 194, 13); background-color: rgb(244, 194, 13); color: rgb(14, 13, 11); }
+.cmp-chip-locked { opacity: 0.22; }
+.cmp-chipgroup { margin-bottom: 5px; }
+.cmp-chipgroup-title { font-size: 7px; letter-spacing: 3px; color: rgba(236, 228, 211, 0.45); margin-bottom: 1px; }
+.cmp-chipscroll { flex-shrink: 1; max-height: 210px; }
+
+/* ---------- campaign: level ---------- */
+.cmp-objective { position: absolute; top: 72px; left: 580px; right: 470px; padding: 8px 12px; border-top-width: 4px; border-top-color: rgb(244, 194, 13); }
+.cmp-noeditor .cmp-objective { left: 10px; }
+.cmp-obj-title { color: rgb(244, 194, 13); font-size: 10px; letter-spacing: 2px; }
+.cmp-obj-line { font-size: 17px; white-space: normal; margin: 4px 0; }
+.cmp-obj-time { font-size: 11px; margin-left: 8px; }
+.cmp-timebar { flex-grow: 1; width: auto; }
+.cmp-heldbar { width: auto; margin-top: 4px; }
+.cmp-held-fill { background-color: rgb(244, 194, 13); }
+.cmp-rightcol { position: absolute; top: 72px; right: 10px; width: 450px; }
+.cmp-proctor { margin-bottom: 6px; border-left-width: 6px; border-left-color: rgb(244, 194, 13); }
+.cmp-proctor-name { color: rgb(244, 194, 13); letter-spacing: 4px; font-size: 9px; }
+.cmp-proctor-text { white-space: normal; font-size: 15px; color: rgb(236, 228, 211); min-height: 46px; margin: 6px 0; }
+.cmp-newwords { color: rgb(244, 194, 13); font-size: 12px; white-space: normal; }
+.cmp-editor { position: absolute; left: 10px; top: 72px; width: 560px; bottom: 66px; }
+.cmp-editor > * { flex-shrink: 0; }
+.cmp-editor > .cmp-code { flex-shrink: 1; }
+.cmp-editor > .cmp-chipscroll { flex-shrink: 1; }
+.cmp-code { flex-grow: 1; min-height: 150px; }
+.cmp-hands { }
+.cmp-controls { position: absolute; left: 10px; bottom: 8px; width: 560px; flex-direction: row; align-items: center; flex-wrap: wrap; padding: 6px 8px; }
+.cmp-run { font-size: 11px; padding: 6px 18px; }
+.cmp-runstate { font-size: 8px; letter-spacing: 1px; margin-left: 6px; color: rgba(236, 228, 211, 0.5); }
+.cmp-evolve { position: absolute; left: 10px; width: 560px; top: 46%; bottom: 66px; overflow: hidden; }
+.cmp-evolve > * { flex-shrink: 0; }
+.cmp-chart { height: 110px; margin: 6px 0; background-color: rgba(236, 228, 211, 0.03); border-width: 1px; border-color: rgba(236, 228, 211, 0.1); }
+.cmp-legend { font-size: 11px; }
+.cmp-slider { margin: 0 0 2px 0; }
+.cmp-slider > Label { min-width: 90px; color: rgba(236, 228, 211, 0.7); font-size: 8px; letter-spacing: 2px; -unity-font-definition: resource("Argmax/Fonts/Michroma"); }
+.cmp-source { color: rgb(244, 208, 120); font-size: 11px; white-space: normal; margin-top: 4px; max-height: 64px; overflow: hidden; }
+.campaign .bottombar { left: 580px; right: 10px; }
+.campaign .banner { display: none; }
+.cmp-evolve-mode .cmp-editor { bottom: 55%; }
+
+/* ---------- campaign: result / epilogue ---------- */
+.cmp-result { align-items: center; justify-content: center; background-color: rgba(8, 7, 6, 0.72); }
+.cmp-result-box { width: 800px; max-width: 96%; padding: 20px 26px; border-top-width: 8px; border-top-color: rgb(244, 194, 13); }
+.cmp-res-title { font-size: 40px; letter-spacing: 12px; -unity-text-align: middle-center; -unity-font-definition: resource("Argmax/Fonts/Michroma"); }
+.cmp-stars { justify-content: center; margin: 8px 0 10px 0; }
+.cmp-stars > * { margin: 0 7px; }
+.cmp-res-stats { -unity-text-align: middle-center; font-size: 10px; letter-spacing: 1.5px; white-space: normal; margin-bottom: 6px; color: rgba(236, 228, 211, 0.75); }
+.cmp-res-outro { font-size: 16px; margin: 8px 0; -unity-text-align: middle-center; color: rgb(236, 228, 211); }
+.cmp-concept { margin-top: 10px; padding: 12px 14px; border-left-width: 6px; border-color: rgb(47, 97, 255); background-color: rgba(47, 97, 255, 0.08); }
+.cmp-concept-k { color: rgb(122, 156, 255); font-size: 8px; letter-spacing: 3px; }
+.cmp-concept-title { font-size: 26px; color: rgb(236, 228, 211); margin: 4px 0 6px 0; }
+.cmp-concept-body { font-size: 15px; color: rgba(236, 228, 211, 0.86); }
+.cmp-interview { color: rgb(244, 208, 120); font-size: 13px; margin-top: 8px; }
+.cmp-res-buttons { justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.cmp-epi-box { width: 920px; max-width: 96%; padding: 20px 26px; border-top-width: 8px; border-top-color: rgb(47, 97, 255); }
+.cmp-epi-title { color: rgb(236, 228, 211); }
+.cmp-epi-text { font-size: 20px; min-height: 64px; -unity-text-align: middle-center; margin: 10px 0; }
+.cmp-epi-chart { height: 220px; background-color: rgba(236, 228, 211, 0.03); margin: 8px 0 12px 0; }

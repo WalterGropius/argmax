@@ -16,6 +16,10 @@ namespace ArgmaxClient
         Vector2 mapSize = new Vector2(64, 64);
         Vector3 dragAnchor;
         bool dragging;
+        float shake;
+
+        /// <summary>Screen shake from big deaths, fusions and core hits. Decays in a fraction of a second.</summary>
+        public void AddShake(float amount) { shake = Mathf.Min(0.7f, shake + amount); }
 
         public static CameraRig Create()
         {
@@ -27,8 +31,10 @@ namespace ArgmaxClient
             cam.nearClipPlane = 0.3f;
             cam.farClipPlane = 400f;
             cam.allowHDR = true;
+            cam.allowMSAA = false;
             go.tag = "MainCamera";
             go.AddComponent<AudioListener>();
+            go.AddComponent<NeonPost>();
             var rig = go.AddComponent<CameraRig>();
             rig.Cam = cam;
             return rig;
@@ -77,6 +83,7 @@ namespace ArgmaxClient
             }
             Focus.x = Mathf.Clamp(Focus.x, -4, mapSize.x + 4);
             Focus.z = Mathf.Clamp(Focus.z, -4, mapSize.y + 4);
+            shake = Mathf.Max(0f, shake - dt * 2.2f);
             Place();
         }
 
@@ -84,7 +91,13 @@ namespace ArgmaxClient
         {
             var rot = Quaternion.Euler(Pitch, 0, 0);
             float back = Height / Mathf.Tan(Pitch * Mathf.Deg2Rad);
-            transform.SetPositionAndRotation(Focus + new Vector3(0, Height, -back), rot);
+            var jitter = Vector3.zero;
+            if (shake > 0.001f)
+            {
+                float t = Time.unscaledTime * 38f, k = shake * shake * Height * 0.02f;
+                jitter = new Vector3(Mathf.PerlinNoise(t, 0.3f) - 0.5f, 0, Mathf.PerlinNoise(0.7f, t) - 0.5f) * k;
+            }
+            transform.SetPositionAndRotation(Focus + jitter + new Vector3(0, Height, -back), rot);
         }
 
         /// <summary>Screen point to ground plane (y = 0).</summary>

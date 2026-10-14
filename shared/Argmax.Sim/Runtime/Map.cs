@@ -21,6 +21,10 @@ namespace Argmax.Sim
         public List<int> Wells = new List<int>();
         public List<int> Goals = new List<int>();
         public List<int> Portals = new List<int>();
+        public readonly List<Placement> Units = new List<Placement>();
+
+        /// <summary>A mote drawn into a level map. Tier -1 = the level's default, -2 = default + 2.</summary>
+        public struct Placement { public int Cell; public int Seat; public int Tier; }
         ushort[][] home = new ushort[2][];
         ushort[] anyCore;
         int[] step9;
@@ -246,8 +250,9 @@ namespace Argmax.Sim
         }
 
         /// <summary>
-        /// Chambers are drawn in ASCII. '#' wall, 'C' your core, 'D' a target core, 'S' scrap,
-        /// 'A'/'a' and 'B'/'b' portal pairs, 'W' well, 'G' goal cell. Row 0 is the top line.
+        /// Levels are drawn in ASCII. '#' wall, 'C' your core, 'D' an enemy core, 'S' scrap, 'A'/'a' and 'B'/'b'
+        /// portal pairs, 'W' well, 'G' goal. Units: 'm' or '1'-'9' your mote (digit = tier), 'e'/'E' enemy
+        /// (level tier / +2), 'f'/'F' feral (tier 1 / 3). Row 0 is the top line.
         /// </summary>
         public static Map Ascii(string[] rows, int scrapAmount)
         {
@@ -272,6 +277,14 @@ namespace Argmax.Sim
                         case 'a': a1 = i; break;
                         case 'B': b0 = i; break;
                         case 'b': b1 = i; break;
+                        case 'm': m.Units.Add(new Placement { Cell = i, Seat = 0, Tier = -1 }); break;
+                        case 'e': m.Units.Add(new Placement { Cell = i, Seat = 1, Tier = -1 }); break;
+                        case 'E': m.Units.Add(new Placement { Cell = i, Seat = 1, Tier = -2 }); break;
+                        case 'f': m.Units.Add(new Placement { Cell = i, Seat = 2, Tier = 1 }); break;
+                        case 'F': m.Units.Add(new Placement { Cell = i, Seat = 2, Tier = 3 }); break;
+                        default:
+                            if (ch >= '1' && ch <= '9') m.Units.Add(new Placement { Cell = i, Seat = 0, Tier = ch - '0' });
+                            break;
                     }
                 }
             }

@@ -71,6 +71,9 @@ namespace Argmax.EditorTools
             {
                 begun = true;
                 started = EditorApplication.timeSinceStartup;
+                app.Rig.EdgePan = false; // the batch-mode cursor sits on a screen edge
+                var look = Environment.GetEnvironmentVariable("ARGMAX_LOOK");
+                if (look != null) app.View.Morph = look != "grid";
                 // world and UI render to separate targets and are composited on capture
                 rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32);
                 uiRt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32);
@@ -95,6 +98,34 @@ namespace Argmax.EditorTools
                         app.View.FieldMode = 3;
                         break;
                     case "menu": break;
+                    case "map":
+                        app.Progress.DryRun = true;
+                        if (int.TryParse(Environment.GetEnvironmentVariable("ARGMAX_DEMO_PROGRESS"), out var demo)) app.Progress.DemoFill(demo);
+                        app.StartCampaign();
+                        break;
+                    case "level":
+                    {
+                        app.Progress.DryRun = true;
+                        int id = int.TryParse(Environment.GetEnvironmentVariable("ARGMAX_LEVEL"), out var lv) ? lv : 202;
+                        float sp = float.TryParse(Environment.GetEnvironmentVariable("ARGMAX_SPEED"), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) ? spd : 1f;
+                        app.Campaign.Autoplay(id, sp);
+                        if (Environment.GetEnvironmentVariable("ARGMAX_FIELD") != null) app.View.FieldMode = int.Parse(Environment.GetEnvironmentVariable("ARGMAX_FIELD"));
+                        break;
+                    }
+                    case "evolve":
+                    {
+                        app.Progress.DryRun = true;
+                        app.Campaign.Enter(602);
+                        app.Campaign.DebugEvolve();
+                        break;
+                    }
+                    case "briefing":
+                    {
+                        app.Progress.DryRun = true;
+                        int id = int.TryParse(Environment.GetEnvironmentVariable("ARGMAX_LEVEL"), out var lv) ? lv : 201;
+                        app.Campaign.Enter(id);
+                        break;
+                    }
                     case "ml": app.Settings.Pilot = PilotKind.Ml; app.StartSandbox(); break;
                     case "jev": app.Settings.Pilot = PilotKind.Jev; app.StartSandbox(); break;
                     default: app.StartSandbox(); break;
@@ -106,12 +137,14 @@ namespace Argmax.EditorTools
             double t = EditorApplication.timeSinceStartup - started;
             if (shots < ShotAt.Length && t >= ShotAt[shots])
             {
-                if (mode != "fields")
+                if (mode != "fields" && mode != "level" && mode != "map" && mode != "briefing" && mode != "evolve")
                 {
                     if (shots == 1 && app.Session?.World != null) { SelectSome(app); app.View.FieldMode = mode == "battle" ? 5 : mode == "chamber" ? 2 : 3; }
                     if (shots == 2) app.View.FieldMode = 0;
                 }
-                Capture(app, Path.Combine(outDir, mode + "-" + shots + ".png"));
+                var tag = mode == "level" || mode == "briefing" ? mode + "-" + (Environment.GetEnvironmentVariable("ARGMAX_LEVEL") ?? "202") : mode;
+                if (mode == "level" && shots == 1 && Environment.GetEnvironmentVariable("ARGMAX_FIELD") != null) app.View.FieldMode = int.Parse(Environment.GetEnvironmentVariable("ARGMAX_FIELD"));
+                Capture(app, Path.Combine(outDir, tag + "-" + shots + ".png"));
                 var w = app.Session?.World;
                 Debug.Log($"ARGMAX SMOKE: t={t:0.0}s session={app.Session?.Title} status={app.Session?.Status} tick={(w != null ? w.Tick : -1)} motes={(w != null ? w.MoteCount : 0)} pilot={app.Session?.PilotReadout}");
                 shots++;
@@ -120,7 +153,7 @@ namespace Argmax.EditorTools
             if (shots >= ShotAt.Length)
             {
                 var w = app.Session?.World;
-                bool ok = w != null && w.MoteCount > 0;
+                bool ok = mode == "map" || (w != null && w.MoteCount > 0);
                 Debug.Log("ARGMAX SMOKE: " + (ok ? "PASS" : "FAIL") + " (" + mode + ")");
                 app.Settings.Pilot = PilotKind.Server; // don't leave a smoke choice in the user's prefs
                 app.Settings.Save();
@@ -207,6 +240,8 @@ namespace Argmax.EditorTools
             uint b = p.Length > 5 ? Argmax.Sim.Presets.IdOf(p[5]) : Argmax.Sim.Presets.Turtle;
             app.StartSpectate(seed, a, b, speed);
             if (app.Session is LocalSession ls) ls.RunToEnd(start);
+            var post = app.Rig.Cam.GetComponent<NeonPost>();
+            if (post != null) post.Grain = 0.012f; // grain is noise to a GIF encoder
             app.Ui.Cinematic();
             filmEnd = start + ticks;
             frameDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "logs", "frames"));

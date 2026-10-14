@@ -29,3 +29,12 @@ logs/
 
 # editor / agent local config
 .claude/
+
+# release builds
+builds/
+dist/
+
+# unity build byproducts
+client/Data/
+client/Assets/Resources/PerformanceTestRun*
+client/Assets/Resources.meta

@@ -22,7 +22,10 @@ namespace ArgmaxClient
         VisualElement myHp, foeHp, terminalLines, slotsRow, jevGrid, rulesBox, libList, proctorBox, chamberList, recordsBox, endButtons;
         Label[] jevCells = new Label[9];
         TextField nameField, codeField, jevField, code, chamberCode, dbField;
-        Button serverBtn, aiBtn, pilotBtn;
+        Button serverBtn, aiBtn, pilotBtn, soundBtn, musicBtn, campaignBtn, lookBtn;
+        Label campaignL;
+        VisualElement uriRow;
+        TextField uriField;
         readonly List<(VisualElement el, Label name, Label cost)> slots = new List<(VisualElement, Label, Label)>();
         float toastUntil, nextHud;
         int chamberSel = 1;
@@ -39,7 +42,6 @@ namespace ArgmaxClient
             Root.pickingMode = PickingMode.Ignore;
             var uss = Resources.Load<StyleSheet>("Argmax/UI/argmax");
             if (uss != null) Root.styleSheets.Add(uss);
-            TryMonospace();
 
             Labels = Screen("labels"); Labels.pickingMode = PickingMode.Ignore;
             BuildHud();
@@ -51,17 +53,6 @@ namespace ArgmaxClient
             cursorHint = L("", "cursor-hint"); cursorHint.pickingMode = PickingMode.Ignore; Root.Add(cursorHint);
             toast = L("", "toast"); toast.pickingMode = PickingMode.Ignore; Root.Add(toast);
             ShowMenu();
-        }
-
-        void TryMonospace()
-        {
-            try
-            {
-                var font = Font.CreateDynamicFontFromOSFont(new[] { "Menlo", "SF Mono", "Consolas", "DejaVu Sans Mono", "Courier New" }, 16);
-                var fa = UnityEngine.TextCore.Text.FontAsset.CreateFontAsset(font);
-                if (fa != null) Root.style.unityFontDefinition = new StyleFontDefinition(FontDefinition.FromSDFFont(fa));
-            }
-            catch (Exception e) { Debug.Log("ARGMAX: monospace font unavailable, using default (" + e.Message + ")"); }
         }
 
         // ================================================================ helpers
@@ -84,7 +75,7 @@ namespace ArgmaxClient
 
         static Button B(string text, Action onClick, string cls = "btn")
         {
-            var b = new Button(onClick) { text = text };
+            var b = new Button(() => { Audio.Play(Sfx.Click); onClick(); }) { text = text };
             foreach (var c in cls.Split(' ')) b.AddToClassList(c);
             return b;
         }
@@ -123,22 +114,47 @@ namespace ArgmaxClient
             menu.AddToClassList("menu");
             menu.pickingMode = PickingMode.Position;
             var box = new VisualElement(); box.AddToClassList("menu-box"); menu.Add(box);
-            box.Add(L("ARGMAX", "logo"));
-            box.Add(L("you don't command the swarm. you write the function it maximizes.", "tagline"));
+            var hero = new VisualElement(); hero.AddToClassList("menu-hero");
+            var comp = new Composition(); comp.style.position = Position.Absolute; comp.style.left = 0; comp.style.right = 0; comp.style.top = 0; comp.style.bottom = 0;
+            hero.Add(comp);
+            var logo = new Logotype(); logo.style.position = Position.Absolute; logo.style.left = 0; logo.style.top = 0; logo.style.bottom = 0; logo.style.width = Length.Percent(66);
+            hero.Add(logo);
+            box.Add(hero);
+            box.Add(L("you don't command the swarm. you write the function it maximizes.", "tagline voice"));
 
             var s = app.Settings;
-            var conn = Panel("CONNECTION");
-            serverBtn = B("", () => { s.Server = s.Server == "local" ? "maincloud" : "local"; RefreshMenu(); }, "btn");
+            var camp = Panel("BOOT SEQUENCE  //  THE CAMPAIGN", "menu-campaign");
+            campaignL = L("", "dim");
+            camp.Add(L("New here? Start with this. 28 tests that teach the game, a little computer science, and why PROCTOR is the way it is.", "menu-campaign-text body"));
+            campaignBtn = B("BEGIN", () => app.ContinueCampaign(), "btn btn-hot");
+            camp.Add(Row(campaignBtn, B("CURRICULUM MAP", () => app.StartCampaign()), campaignL));
+            box.Add(camp);
+
+            var conn = Panel("CONNECTION  (self-hosted: run your own SpacetimeDB, see the README)");
+            serverBtn = B("", () =>
+            {
+                var choices = Settings.ServerChoices;
+                s.Server = choices[(Array.IndexOf(choices, s.Server) + 1) % choices.Length];
+                RefreshMenu();
+            }, "btn");
             dbField = Field(s.Database);
-            dbField.RegisterValueChangedCallback(e => { if (s.Server == "maincloud") s.MaincloudDb = e.newValue; else s.LocalDb = e.newValue; });
+            dbField.RegisterValueChangedCallback(e => { if (s.Server == "maincloud") s.MaincloudDb = e.newValue; else if (s.Server == "custom") s.CustomDb = e.newValue; else s.LocalDb = e.newValue; });
             nameField = Field(s.Name);
             nameField.RegisterValueChangedCallback(e => s.Name = e.newValue);
             conn.Add(Row(L("server", "field-label"), serverBtn, L("db", "dim"), dbField));
+            uriField = Field(s.CustomUri);
+            uriField.RegisterValueChangedCallback(e => s.CustomUri = e.newValue.Trim());
+            uriRow = Row(L("uri", "field-label"), uriField);
+            conn.Add(uriRow);
             conn.Add(Row(L("name", "field-label"), nameField));
             jevField = new TextField { value = s.JevKeyEntered, isPasswordField = true };
             jevField.AddToClassList("grow");
             jevField.RegisterValueChangedCallback(e => s.JevKeyEntered = e.newValue);
             conn.Add(Row(L("jev key", "field-label"), jevField));
+            soundBtn = B("", () => { s.Muted = !s.Muted; Audio.Muted = s.Muted; RefreshMenu(); }, "btn btn-small");
+            musicBtn = B("", () => { s.MusicOn = !s.MusicOn; Audio.Music = s.MusicOn ? 0.45f : 0f; RefreshMenu(); }, "btn btn-small");
+            lookBtn = B("", () => app.ToggleLook(), "btn btn-small");
+            conn.Add(Row(L("sound", "field-label"), soundBtn, musicBtn, L("   look", "field-label"), lookBtn));
             box.Add(conn);
 
             var grid = new VisualElement(); grid.AddToClassList("menu-grid"); box.Add(grid);
@@ -181,19 +197,53 @@ namespace ArgmaxClient
         void RefreshMenu()
         {
             var s = app.Settings;
-            serverBtn.text = s.Server == "local" ? "LOCAL  127.0.0.1:3000" : "MAINCLOUD";
+            serverBtn.text = s.Server == "local" ? "LOCAL  127.0.0.1:3000" : s.Server == "custom" ? "CUSTOM SERVER" : "MAINCLOUD (dev)";
             dbField.SetValueWithoutNotify(s.Database);
+            Show(uriRow, s.Server == "custom");
+            soundBtn.text = s.Muted ? "SOUND OFF" : "SOUND ON";
+            RefreshLook();
+            musicBtn.text = s.MusicOn ? "MUSIC ON" : "MUSIC OFF";
+            var p = app.Progress;
+            if (p != null)
+            {
+                int solved = p.SolvedCount;
+                campaignBtn.text = solved == 0 ? "BEGIN" : solved >= Campaign.Levels.Length ? "REPLAY THE FINALE" : "CONTINUE  " + Campaign.Get(p.NextLevel()).Code;
+                campaignL.text = solved == 0 ? "" : "   " + solved + " / " + Campaign.Levels.Length + " tests   " + p.StarCount + " stars";
+            }
             aiBtn.text = Presets.Get(s.AiMeta, 0)?.Name ?? "OVERMIND";
             pilotBtn.text = s.Pilot == PilotKind.Server ? "server metaprogram" : s.Pilot == PilotKind.Ml ? "ML-Agents (local)" : "JEV System 1 (local)";
         }
 
         public void ShowMenu()
         {
+            app.Campaign?.HideAll();
+            CampaignMode(false);
             Show(menu, true); Show(hud, false); Show(editor, false); Show(chambers, false); Show(endgame, false);
             RefreshMenu();
         }
 
         public void MenuStatus(string s) { if (menuStatus != null) menuStatus.text = s; }
+
+        public void RefreshLook() { if (lookBtn != null) lookBtn.text = app.View != null && app.View.Morph ? "MORPH  (G)" : "GRID  (G)"; }
+
+        /// <summary>Hide every full-screen page (the campaign shows its own).</summary>
+        public void HideScreens()
+        {
+            Show(menu, false); Show(hud, false); Show(editor, false); Show(chambers, false); Show(endgame, false);
+        }
+
+        /// <summary>In a campaign test the briefing and editor replace the terminal and the sandbox editor.</summary>
+        public void CampaignMode(bool on)
+        {
+            Root.EnableInClassList("campaign", on);
+            Show(terminal, !on);
+            if (on) Show(editor, false);
+        }
+
+        public void BringOverlaysToFront()
+        {
+            selectRect.BringToFront(); cursorHint.BringToFront(); toast.BringToFront();
+        }
 
         // ================================================================ hud
 
@@ -350,11 +400,14 @@ namespace ArgmaxClient
                 for (int k = 1; k <= Rules.MaxTier; k++) if (byTier[k] > 0) sb.Append(Rules.Value(k)).Append('x').Append(byTier[k]).Append("  ");
                 selectionL.text = sb.ToString();
             }
-            else selectionL.text = s.CanCommand ? "drag to select your motes" : "spectating";
+            else selectionL.text = s.CanCommand ? "drag to select your motes" : app.Campaign.Active ? "click or drag motes to watch them decide (JEV VIEW)" : "spectating";
             hintL.text = s.CanCommand
-                ? "RMB move | A attack | M merge | X split | S stop | H hold | B beacon | Z spawn | U auto | Tab code | F field: " + WorldView.FieldNames[view.FieldMode]
+                ? "RMB move | A attack | M merge | X split | S stop | H hold | B beacon | Z spawn | U auto | Tab code | G look | F field: " + WorldView.FieldNames[view.FieldMode]
+                : app.Campaign.Active ? "F field: " + WorldView.FieldNames[view.FieldMode] + " | G look | +/- speed | P pause | I inspector | arrows / wheel: camera"
                 : "F field: " + WorldView.FieldNames[view.FieldMode] + " | +/- speed | P pause | [ ] arena | I inspector";
-            Show(inspector, inspectorOn);
+            // in the campaign the inspector only appears when there is something to inspect
+            bool something = view.Selected.Count == 1 || view.Hovered != 0;
+            Show(inspector, inspectorOn && (something || !app.Campaign.Active));
             if (inspectorOn) Inspect(w, view, s.LocalSeat);
         }
 
@@ -590,7 +643,7 @@ namespace ArgmaxClient
             endgame.AddToClassList("endgame");
             endgame.pickingMode = PickingMode.Position;
             var box = Panel(null); box.style.width = 640;
-            endTitle = L("", "endgame-title"); box.Add(endTitle);
+            endTitle = L("", "endgame-title display"); box.Add(endTitle);
             endStats = L("", "dim"); endStats.style.whiteSpace = WhiteSpace.Normal; box.Add(endStats);
             endButtons = new VisualElement(); endButtons.AddToClassList("row"); box.Add(endButtons);
             endgame.Add(box);

@@ -21,12 +21,20 @@ namespace ArgmaxClient
         public uint Hovered;
         public struct Drawn { public uint Id; public Vector3 Pos; public byte Seat; public byte Tier; }
         public readonly List<Drawn> Visible = new List<Drawn>();
+        public System.Action<float> Shake;
+        public bool Sound = true;
+        /// <summary>MORPH (raymarched matter) or GRID (flat Bauhaus shapes). Toggle with G.</summary>
+        public bool Morph = true;
+        public bool MorphAvailable => morph != null && morph.Ready;
+        MorphRenderer morph;
+        Texture2D fieldDistTex;
+        ushort[] fieldDistPx;
 
         Mesh quad, cube;
         Material spriteMat, glowMat, blockMat, groundMat;
-        Batch bodies, glows, rings, lines, blocks, walls;
+        Batch bodies, glows, rings, lines, blocks, walls, shadows;
         GameObject ground;
-        Texture2D fieldTex;
+        Texture2D fieldTex, occTex;
         Color32[] fieldPx;
         int fieldTick = -1, fieldModeShown = -1;
         Map map;
@@ -44,6 +52,9 @@ namespace ArgmaxClient
         int labelsUsed;
 
         struct Track { public Vector2 From, To; public float Born; }
+        struct Spark { public Vector3 P, V; public Color C; public float T0, Life, Size; public int Shape; public float Spin; }
+        readonly List<Spark> sparks = new List<Spark>();
+        uint sparkSeed = 0x2545F491u;
         struct FxItem { public int Kind; public Vector3 A, B; public Color C; public float T0, Life, Size; public string Text; }
 
         // ------------------------------------------------------------------ setup
@@ -58,6 +69,7 @@ namespace ArgmaxClient
             glowMat = Make("Argmax/Sprite", BlendMode.SrcAlpha, BlendMode.One);
             blockMat = new Material(LoadShader("Argmax/Block")) { enableInstancing = true };
             bodies = new Batch(spriteMat, quad);
+            shadows = new Batch(spriteMat, quad);
             glows = new Batch(glowMat, quad);
             rings = new Batch(glowMat, quad);
             lines = new Batch(glowMat, quad);
@@ -68,6 +80,9 @@ namespace ArgmaxClient
             ground.AddComponent<MeshFilter>().sharedMesh = Meshes.FlatQuad();
             ground.AddComponent<MeshRenderer>().sharedMaterial = groundMat;
             ground.SetActive(false);
+            Shader.SetGlobalFloat("_ArgmaxEmission", 1.15f);
+            Shader.SetGlobalVector("_ArgmaxEdge", new Vector4(0.925f, 0.894f, 0.827f, 0.5f));
+            morph = new MorphRenderer();
         }
 
         static Shader LoadShader(string name)
@@ -90,6 +105,7 @@ namespace ArgmaxClient
             map = m;
             tracks.Clear();
             fx.Clear();
+            sparks.Clear();
             ground.SetActive(true);
             ground.transform.position = new Vector3(m.W * 0.5f, 0f, m.H * 0.5f);
             ground.transform.localScale = new Vector3(m.W + 24, 1, m.H + 24);
@@ -100,6 +116,10 @@ namespace ArgmaxClient
             fieldTex.Apply();
             groundMat.SetTexture("_Field", fieldTex);
             fieldTick = -1;
+            fieldDistTex = new Texture2D(m.W, m.H, TextureFormat.RHalf, false, true) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            fieldDistPx = new ushort[m.W * m.H];
+            BakeOcclusion(m);
+            morph?.Rebuild(m);
             walls.StaticClear();
             for (int y = 0; y < m.H; y++)
                 for (int x = 0; x < m.W; x++)
@@ -109,14 +129,80 @@ namespace ArgmaxClient
                     float h = border ? 0.5f : 0.6f + ((x * 7 + y * 13) % 5) * 0.08f;
                     float v = ((x * 31 + y * 17) % 7) / 7f;
                     var c = Palette.Wall * (0.85f + 0.3f * v);
-                    walls.AddStatic(Matrix4x4.TRS(new Vector3(x + 0.5f, h * 0.5f, y + 0.5f), Quaternion.identity, new Vector3(0.96f, h, 0.96f)), c, Vector4.zero);
+                    walls.AddStatic(Matrix4x4.TRS(new Vector3(x + 0.5f, h * 0.5f, y + 0.5f), Quaternion.identity, new Vector3(0.96f, h, 0.96f)), c, new Vector4(0, border ? 0.35f : 0.8f + 0.4f * v, 0, 0));
                 }
+        }
+
+        /// <summary>Soft contact shadows next to walls (R) and goal tiles (G), baked once per map.</summary>
+        void BakeOcclusion(Map m)
+        {
+            occTex = new Texture2D(m.W, m.H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[m.W * m.H];
+            for (int y = 0; y < m.H; y++)
+                for (int x = 0; x < m.W; x++)
+                {
+                    int i = m.Idx(x, y);
+                    if (m.Cell[i] == Argmax.Sim.Terrain.Wall) { px[i] = new Color32(255, 0, 0, 255); continue; }
+                    float near = 0;
+                    for (int dy = -2; dy <= 2; dy++)
+                        for (int dx = -2; dx <= 2; dx++)
+                        {
+                            int nx = x + dx, ny = y + dy;
+                            if (!m.In(nx, ny) || m.Cell[m.Idx(nx, ny)] != Argmax.Sim.Terrain.Wall) continue;
+                            near += 1f / (dx * dx + dy * dy + 1f);
+                        }
+                    px[i] = new Color32((byte)(Mathf.Clamp01(near * 0.45f) * 255), (byte)(m.Goals.Contains(i) ? 255 : 0), 0, 255);
+                }
+            occTex.SetPixels32(px);
+            occTex.Apply(false);
+            groundMat.SetTexture("_Occ", occTex);
+        }
+
+        float Rand() { sparkSeed ^= sparkSeed << 13; sparkSeed ^= sparkSeed >> 17; sparkSeed ^= sparkSeed << 5; return (sparkSeed & 0xFFFFFF) / 16777216f; }
+
+        static readonly int[] ConfettiShapes = { 0, 1, 7 };
+
+        /// <summary>Geometric confetti: circles, squares and triangles, mostly in the given colour, some bone.</summary>
+        void Burst(Vector3 at, Color c, int n, float speed, float life, float size, float up = 0f)
+        {
+            for (int k = 0; k < n && sparks.Count < 2500; k++)
+            {
+                float a = Rand() * Mathf.PI * 2f, sp = speed * (0.35f + 0.65f * Rand());
+                var col = Rand() < 0.25f ? Palette.Bone : c;
+                sparks.Add(new Spark
+                {
+                    P = at, V = new Vector3(Mathf.Cos(a) * sp, up * (0.5f + Rand()), Mathf.Sin(a) * sp), C = col, T0 = Time.time,
+                    Life = life * (0.6f + 0.4f * Rand()), Size = size * (1.4f + 1.2f * Rand()), Shape = ConfettiShapes[(int)(Rand() * 2.999f)], Spin = (Rand() - 0.5f) * 720f,
+                });
+            }
+        }
+
+        void DrawSparks()
+        {
+            float now = Time.time, dt = Mathf.Min(Time.deltaTime, 0.05f);
+            int w = 0;
+            for (int i = 0; i < sparks.Count; i++)
+            {
+                var p = sparks[i];
+                float k = (now - p.T0) / p.Life;
+                if (k >= 1f) continue;
+                p.P += p.V * dt;
+                p.V *= 1f - 3.2f * dt;
+                p.V.y -= 4f * dt;
+                if (p.P.y < 0.03f) { p.P.y = 0.03f; p.V.y = 0; }
+                sparks[w++] = p;
+                float fade = 1f - k;
+                float sz = p.Size * (0.6f + 0.4f * fade);
+                bodies.Add(Matrix4x4.TRS(p.P, Quaternion.Euler(0, p.Spin * (now - p.T0), 0), new Vector3(sz, 1f, sz)), WithA(p.C, Mathf.Min(1f, fade * 1.6f)), new Vector4(p.Shape, 0.06f, 0, 0));
+            }
+            sparks.RemoveRange(w, sparks.Count - w);
         }
 
         /// <summary>Acknowledge an order on the ground: white for MOVE, hot for ATTACK.</summary>
         public void PingOrder(Vector3 at, bool attack)
         {
             fx.Add(new FxItem { Kind = 1, A = new Vector3(Mathf.Floor(at.x) + 0.5f, 0.05f, Mathf.Floor(at.z) + 0.5f), C = attack ? Palette.Foe : Palette.White, T0 = Time.time, Life = 0.45f, Size = 1.6f });
+            Audio.Play(attack ? Sfx.Attack : Sfx.Move);
         }
 
         public void Hide()
@@ -142,11 +228,15 @@ namespace ArgmaxClient
             UpdateField(w);
             labelsUsed = 0;
             float a = Mathf.Clamp01((Time.time - tickAt) / tickSeconds);
+            bool morphOn = Morph && MorphAvailable;
+            ground.SetActive(!morphOn);
             DrawStatic(w);
-            DrawMotes(w, a);
+            DrawMotes(w, a, morphOn);
             DrawFx();
-            walls.FlushStatic();
-            blocks.Flush(); glows.Flush(); bodies.Flush(); rings.Flush(); lines.Flush();
+            DrawSparks();
+            if (morphOn) morph.Draw(w, Visible, Selected, localSeat, Cam, fieldTex, fieldDistTex, FieldMode != 0);
+            else walls.FlushStatic();
+            blocks.Flush(); shadows.Flush(); glows.Flush(); bodies.Flush(); rings.Flush(); lines.Flush();
             for (int i = labelsUsed; i < labels.Count; i++) labels[i].style.display = DisplayStyle.None;
         }
 
@@ -195,8 +285,9 @@ namespace ArgmaxClient
                 var c = alive ? Color.Lerp(col * 0.35f, col, 0.35f + 0.65f * hp) : col * 0.15f;
                 var p = Cell(map.CoreX[s], map.CoreY[s]);
                 // low and wide so the core never hides the units fighting behind it
-                blocks.Add(Matrix4x4.TRS(p + Vector3.up * 0.35f, Quaternion.Euler(0, t * 12f * (s == 0 ? 1 : -1), 0), new Vector3(2.5f, 0.7f, 2.5f)), c, new Vector4(alive ? 0.35f : 0f, 0, 0, 0));
-                blocks.Add(Matrix4x4.TRS(p + Vector3.up * 0.95f, Quaternion.Euler(0, 45f + t * 30f, 0), Vector3.one * (0.55f + 0.1f * Mathf.Sin(t * 3f))), Palette.White * (alive ? 1f : 0.2f), new Vector4(0.6f, 0, 0, 0));
+                blocks.Add(Matrix4x4.TRS(p + Vector3.up * 0.35f, Quaternion.Euler(0, t * 12f * (s == 0 ? 1 : -1), 0), new Vector3(2.5f, 0.7f, 2.5f)), c, new Vector4(alive ? 0.35f : 0f, alive ? 2.2f : 0.3f, 0, 0));
+                blocks.Add(Matrix4x4.TRS(p + Vector3.up * 0.95f, Quaternion.Euler(0, 45f + t * 30f, 0), Vector3.one * (0.55f + 0.1f * Mathf.Sin(t * 3f))), Palette.White * (alive ? 1f : 0.2f), new Vector4(0.9f, 1.5f, 0, 0));
+                if (alive) Ring(p + Vector3.up * 0.04f, 3.6f + 0.25f * Mathf.Sin(t * 2.4f + s), WithA(col, 0.35f * hp + 0.1f), 0.035f);
                 if (alive) Sprite(glows, p + Vector3.up * 0.02f, 7.5f + 0.4f * Mathf.Sin(t * 2f), WithA(col, 0.35f * hp + 0.1f), 4);
             }
             // scrap
@@ -206,7 +297,7 @@ namespace ArgmaxClient
                 float k = Mathf.Sqrt(Mathf.Min(n.Amount, 900) / 900f);
                 float sz = 0.35f + 0.45f * k;
                 var p = Cell(n.X, n.Y);
-                blocks.Add(Matrix4x4.TRS(p + Vector3.up * sz * 0.6f, Quaternion.Euler(0, (n.X * 37 + n.Y * 11) % 90, 0), new Vector3(sz, sz * 1.2f, sz)), Palette.Scrap, new Vector4(0.5f, 0, 0, 0));
+                blocks.Add(Matrix4x4.TRS(p + Vector3.up * sz * 0.6f, Quaternion.Euler(0, (n.X * 37 + n.Y * 11) % 90, 0), new Vector3(sz, sz * 1.2f, sz)), Palette.Scrap, new Vector4(0.7f, 0.8f, 0, 0));
                 Sprite(glows, p + Vector3.up * 0.01f, 2.6f, WithA(Palette.Scrap, 0.22f), 4);
             }
             // portals and wells
@@ -239,7 +330,7 @@ namespace ArgmaxClient
             }
         }
 
-        void DrawMotes(World w, float alpha)
+        void DrawMotes(World w, float alpha, bool morphOn)
         {
             Visible.Clear();
             float now = Time.time;
@@ -258,17 +349,21 @@ namespace ArgmaxClient
                 float hp = Mathf.Clamp01(m.Hp / (float)Rules.MaxHp(m.Tier));
                 col *= 0.55f + 0.45f * hp;
                 col.a = 1f;
-                int shape = m.Seat == Rules.NoiseSeat ? 6 : m.Seat == localSeat ? 0 : 2;
+                // Kandinsky: you are circles, they are squares, the Noise is triangles
+                int shape = m.Seat == Rules.NoiseSeat ? 7 : m.Seat == localSeat ? 0 : 1;
                 bool fired = m.Has(MoteFlags.Fired);
-                // additive halo: dense swarms accumulate into an aura; firing motes flare
-                Sprite(glows, pos - Vector3.up * 0.01f, size * (3.2f + (fired ? 1.2f : 0f)), WithA(baseCol, 0.34f + 0.04f * m.Tier + (fired ? 0.3f : 0f)), 4);
-                if (e < 1f && (tr.To - tr.From).sqrMagnitude > 0.04f)
-                    Line(new Vector3(tr.From.x, pos.y, tr.From.y), pos, WithA(baseCol, 0.4f * (1f - e)), size * 0.3f);
-                Sprite(bodies, pos, size, col, shape, m.Tier >= 6 ? 0.4f : 0f);
-                if (m.Carry > 0) Sprite(bodies, pos + new Vector3(size * 0.38f, 0.01f, size * 0.38f), 0.16f, Palette.Scrap, 0);
+                if (!morphOn)
+                {
+                    // a hard cut-paper shadow, offset away from the light
+                    shadows.Add(Matrix4x4.TRS(pos + new Vector3(size * 0.16f, -0.01f, -size * 0.16f), Quaternion.identity, new Vector3(size, 1f, size)), new Color(0, 0, 0, 0.55f), new Vector4(shape, 0.06f, 0, 0));
+                    if (fired) Sprite(glows, pos - Vector3.up * 0.005f, size * 2.2f, WithA(baseCol, 0.35f), 4);
+                    bodies.Add(Matrix4x4.TRS(pos, Quaternion.identity, new Vector3(size, 1f, size)), col, new Vector4(shape, 0.06f, fired ? 0.25f : 0f, m.Tier));
+                    if (m.Carry > 0) Sprite(bodies, pos + new Vector3(size * 0.38f, 0.01f, size * 0.38f), 0.16f, Palette.Scrap, 1);
+                }
+                else if (m.Carry > 0) Sprite(bodies, pos + new Vector3(0, 0.9f, 0), 0.18f, Palette.Scrap, 1);
                 bool sel = Selected.Contains(m.Id);
-                if (sel) Ring(pos, size + 0.32f, WithA(Palette.White, 0.9f), 0.07f);
-                else if (m.Id == Hovered) Ring(pos, size + 0.3f, WithA(Palette.White, 0.45f), 0.05f);
+                if (sel) Ring(pos, size + 0.34f, WithA(Palette.Noise, 0.95f), 0.06f);
+                else if (m.Id == Hovered) Ring(pos, size + 0.3f, WithA(Palette.Bone, 0.5f), 0.045f);
                 if (sel && m.Has(MoteFlags.HasOrder) && orderLines++ < 48)
                     Line(pos, Cell(m.Ox, m.Oy, 0.03f), WithA(m.Override > 0 ? Palette.White : baseCol, 0.18f), 0.05f);
                 if (m.Tier >= 4) Label(pos + Vector3.up * 0.2f, Rules.Value(m.Tier).ToString(), m.Tier >= 7 ? Palette.White : col, 10 + m.Tier);
@@ -287,12 +382,18 @@ namespace ArgmaxClient
                 bool infect = (s & (1 << 27)) != 0, core = (s & (1 << 28)) != 0, splash = (s & (1 << 26)) != 0;
                 var c = infect ? Palette.Noise : Palette.Seat(seat, localSeat);
                 fx.Add(new FxItem { Kind = 0, A = CellIdx(from, 0.2f), B = CellIdx(to, 0.2f), C = c, T0 = t, Life = core ? 0.22f : 0.13f, Size = core ? 0.16f : splash ? 0.12f : 0.07f });
-                if (splash) fx.Add(new FxItem { Kind = 1, A = CellIdx(to, 0.05f), C = c, T0 = t, Life = 0.25f, Size = 2.6f });
+                if (splash) { fx.Add(new FxItem { Kind = 1, A = CellIdx(to, 0.05f), C = c, T0 = t, Life = 0.25f, Size = 2.6f }); Burst(CellIdx(to, 0.15f), c, 6, 3f, 0.35f, 0.12f, 1f); }
+                if (core) { Burst(CellIdx(to, 0.4f), c, 5, 4f, 0.4f, 0.12f, 2f); Shake?.Invoke(0.08f); if (Sound) Audio.Play(Sfx.CoreHit, 0.45f); }
+                else if (Sound) Audio.Play(Sfx.Shot, 0.12f, 0.9f + 0.25f * Rand());
             }
             foreach (var d in l.Deaths)
             {
                 int cell = d & 0xFFF, seat = (d >> 12) & 3, tier = (d >> 14) & 0xF;
-                fx.Add(new FxItem { Kind = 1, A = CellIdx(cell, 0.05f), C = Palette.Seat(seat, localSeat), T0 = t, Life = 0.4f, Size = 1.2f + tier * 0.35f });
+                var dc = Palette.Seat(seat, localSeat);
+                fx.Add(new FxItem { Kind = 1, A = CellIdx(cell, 0.05f), C = dc, T0 = t, Life = 0.4f, Size = 1.2f + tier * 0.35f });
+                Burst(CellIdx(cell, 0.15f), dc, 6 + tier * 3, 2.5f + tier * 0.6f, 0.45f + tier * 0.05f, 0.08f + tier * 0.015f, 1.5f);
+                if (tier >= 5) Shake?.Invoke(0.04f * tier);
+                if (Sound) Audio.Play(Sfx.Death, 0.25f + 0.05f * tier, 1.15f - 0.05f * tier);
             }
             foreach (var mg in l.Merges)
             {
@@ -300,16 +401,26 @@ namespace ArgmaxClient
                 var p = CellIdx(cell, 0.05f);
                 fx.Add(new FxItem { Kind = 1, A = p, C = Palette.White, T0 = t, Life = 0.55f, Size = 2.2f + tier * 0.3f });
                 fx.Add(new FxItem { Kind = 3, A = p + Vector3.up * 0.4f, C = Palette.White, T0 = t, Life = 0.8f, Text = Rules.Value(tier).ToString() });
+                Burst(p + Vector3.up * 0.1f, Palette.White, 8 + tier * 2, 1.6f + tier * 0.25f, 0.6f, 0.07f + tier * 0.01f, 3f);
+                if (tier >= 6) Shake?.Invoke(0.03f * tier);
+                if (Sound) Audio.Merge(tier);
             }
             foreach (var cv in l.Converts)
+            {
                 fx.Add(new FxItem { Kind = 1, A = CellIdx(cv & 0xFFF, 0.05f), C = Palette.Noise, T0 = t, Life = 0.6f, Size = 2f });
+                Burst(CellIdx(cv & 0xFFF, 0.2f), Palette.Noise, 10, 2f, 0.6f, 0.08f, 2f);
+                if (Sound) Audio.Play(Sfx.Convert, 0.4f);
+            }
             foreach (var tp in l.Teleports)
             {
                 fx.Add(new FxItem { Kind = 1, A = CellIdx(tp & 0xFFF, 0.05f), C = Palette.PortalA, T0 = t, Life = 0.35f, Size = 1.8f });
                 fx.Add(new FxItem { Kind = 1, A = CellIdx((tp >> 12) & 0xFFF, 0.05f), C = Palette.PortalB, T0 = t, Life = 0.35f, Size = 1.8f });
             }
             foreach (var sp in l.Spawns)
+            {
                 fx.Add(new FxItem { Kind = 1, A = CellIdx(sp & 0xFFF, 0.04f), C = Palette.Seat((sp >> 12) & 3, localSeat), T0 = t, Life = 0.3f, Size = 1f });
+                if (Sound && ((sp >> 12) & 3) == localSeat) Audio.Play(Sfx.Spawn, 0.2f);
+            }
             if (fx.Count > 3000) fx.RemoveRange(0, fx.Count - 3000);
         }
 
@@ -359,7 +470,13 @@ namespace ArgmaxClient
             {
                 var ch = FieldMode == 2 ? Channel.Beacon : FieldMode == 3 ? Channel.Scrap : FieldMode == 4 ? Channel.Home : Channel.Core;
                 var f = Sim.Field(w, ch, seat);
-                var col = FieldMode == 3 ? Palette.Scrap : FieldMode == 5 ? Palette.Foe : Palette.Me;
+                var col = FieldMode == 3 ? Palette.Noise : FieldMode == 5 ? Palette.Foe : Palette.Me;
+                if (f != null && fieldDistPx != null)
+                {
+                    for (int i = 0; i < fieldDistPx.Length; i++) fieldDistPx[i] = Mathf.FloatToHalf(f[i] == Fields.Unreachable ? 1f : Mathf.Min(f[i], 64) / 64f);
+                    fieldDistTex.SetPixelData(fieldDistPx, 0);
+                    fieldDistTex.Apply(false);
+                }
                 if (f != null)
                     for (int i = 0; i < px.Length; i++)
                     {

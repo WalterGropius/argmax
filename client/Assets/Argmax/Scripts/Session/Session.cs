@@ -110,6 +110,16 @@ namespace ArgmaxClient
             if (steps == 200) acc = 0;
         }
 
+        /// <summary>One tick by hand (the campaign's STEP button), effects included.</summary>
+        public void StepOnce()
+        {
+            if (W.Ended) return;
+            Sim.Step(W, queue, log);
+            queue.Clear();
+            FxUtil.Append(pending, log);
+            AfterStep?.Invoke(W);
+        }
+
         /// <summary>Run as fast as possible (chambers' "skip to result").</summary>
         public void RunToEnd(int maxTicks)
         {

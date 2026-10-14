@@ -7,32 +7,33 @@
 <meta name="description" content="A deterministic swarm RTS: System-1 movement classifiers, 2048 fusion, the Argot language, SpacetimeDB servers, and commanders written in code, learned by ML-Agents, or answered by Jev.">
 <meta property="og:title" content="ARGMAX — Programming Swarms by Writing the Function They Maximize">
 <meta property="og:description" content="You don't command the swarm. You write the function it maximizes.">
-<meta property="og:image" content="media/poster.png">
+<meta property="og:image" content="media/poster.jpg">
 <meta property="og:type" content="article">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Jost:ital,wght@0,400;0,500;0,600;1,400&family=Comfortaa:wght@400;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
   onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
 <style>
 :root {
-  --paper: #f6f5f0; --ink: #17191e; --ink-2: #4a505c; --ink-3: #7b8290; --rule: #dcd9cf;
-  --panel: #ffffff; --code-bg: #ecebe4; --accent: #0791a8; --hot: #d81b5a; --amber: #b87700; --noise: #4f8f12;
-  --hero: #05070b; --hero-ink: #d9eef5; --hero-dim: #7f97a3; --cyan: #00e5ff;
-  --serif: "Source Serif 4", Georgia, serif; --sans: "Inter", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --paper: #ece5d6; --ink: #141210; --ink-2: #4c463d; --ink-3: #857d70; --rule: #d3c8b4;
+  --panel: #f4efe4; --code-bg: #e2d9c6; --accent: #2449d8; --hot: #e2391b; --amber: #a67c00; --noise: #a67c00;
+  --hero: #0e0d0b; --hero-ink: #ece4d3; --hero-dim: #9a917f; --cobalt: #2f61ff; --vermilion: #ff4626; --chrome: #f4c20d;
+  --serif: "Jost", "Futura", system-ui, sans-serif; --sans: "Jost", "Futura", system-ui, sans-serif;
+  --display: "Michroma", "Futura", sans-serif; --voice: "Comfortaa", "Jost", sans-serif; --mono: "Space Mono", ui-monospace, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0b0e13; --ink: #dfe9ef; --ink-2: #a9b6bf; --ink-3: #74838d; --rule: #1f2731;
-    --panel: #10151c; --code-bg: #121a22; --accent: #3fd8f0; --hot: #ff4f86; --amber: #ffb000; --noise: #9dff3a;
+    --paper: #0e0d0b; --ink: #ece4d3; --ink-2: #b9b0a0; --ink-3: #857d70; --rule: #2a2621;
+    --panel: #15130f; --code-bg: #1b1915; --accent: #7392ff; --hot: #ff5a3a; --amber: #f4c20d; --noise: #f4c20d;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0b0e13; --ink: #dfe9ef; --ink-2: #a9b6bf; --ink-3: #74838d; --rule: #1f2731;
-  --panel: #10151c; --code-bg: #121a22; --accent: #3fd8f0; --hot: #ff4f86; --amber: #ffb000; --noise: #9dff3a;
+  --paper: #0e0d0b; --ink: #ece4d3; --ink-2: #b9b0a0; --ink-3: #857d70; --rule: #2a2621;
+  --panel: #15130f; --code-bg: #1b1915; --accent: #7392ff; --hot: #ff5a3a; --amber: #f4c20d; --noise: #f4c20d;
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -41,18 +42,20 @@ a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-
 a:hover { border-bottom-color: var(--accent); }
 
 /* ---------- hero ---------- */
-.hero { background: radial-gradient(1200px 500px at 50% -10%, #0c2a33 0%, var(--hero) 60%); color: var(--hero-ink); padding: 56px 16px 28px; }
+.hero { background: var(--hero); color: var(--hero-ink); padding: 56px 16px 28px; }
 .hero-inner { max-width: 1080px; margin: 0 auto; text-align: center; }
-.kicker { font: 600 12px/1 var(--sans); letter-spacing: .22em; color: var(--hero-dim); text-transform: uppercase; }
-.hero h1 { font: 700 clamp(48px, 9vw, 96px)/1 var(--mono); letter-spacing: .14em; margin: 18px 0 10px; color: var(--cyan); text-shadow: 0 0 24px rgba(0,229,255,.35); }
-.hero .subtitle { font: 400 clamp(20px, 3vw, 28px)/1.3 var(--serif); margin: 0 auto 14px; max-width: 760px; }
+.kicker { font: 400 11px/1 var(--display); letter-spacing: .28em; color: var(--hero-dim); text-transform: uppercase; }
+.hero h1 { font: 400 clamp(40px, 8vw, 84px)/1 var(--display); letter-spacing: .18em; margin: 18px 0 10px; color: var(--hero-ink); display: inline-flex; align-items: center; gap: .4em; }
+.hero h1 svg { height: .9em; width: auto; }
+.hero .subtitle { font: 400 clamp(20px, 3vw, 28px)/1.3 var(--sans); margin: 0 auto 14px; max-width: 760px; }
 .hero .tagline { font: 400 15px/1.5 var(--mono); color: var(--hero-dim); margin: 0 0 18px; }
 .authors { font: 500 15px/1.5 var(--sans); color: var(--hero-ink); }
 .authors span { color: var(--hero-dim); font-weight: 400; }
 .links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 22px 0 28px; }
-.links a { font: 600 14px/1 var(--sans); color: var(--hero-ink); border: 1px solid rgba(0,229,255,.45); background: rgba(0,229,255,.06); padding: 10px 16px; border-radius: 999px; }
-.links a:hover { background: rgba(0,229,255,.18); border-color: var(--cyan); }
-.teaser { max-width: 1080px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(0,229,255,.18); }
+.links a { font: 400 11px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--hero-ink); border: 1px solid rgba(236,228,211,.45); background: transparent; padding: 12px 16px; border-radius: 0; }
+.links a:hover { background: var(--hero-ink); color: var(--hero); border-color: var(--hero-ink); }
+.links a:first-child { background: var(--vermilion); border-color: var(--vermilion); color: var(--hero); }
+.teaser { max-width: 1080px; margin: 0 auto; border-radius: 0; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6); border-top: 6px solid var(--chrome); }
 .teaser video { display: block; width: 100%; height: auto; background: #000; }
 .hero .figcap { max-width: 860px; margin: 14px auto 0; font: 400 14px/1.5 var(--sans); color: var(--hero-dim); text-align: left; }
 .hero .figcap b { color: var(--hero-ink); }
@@ -69,21 +72,21 @@ nav.toc li a:hover { color: var(--accent); }
 main { max-width: 760px; min-width: 0; padding: 40px 0 80px; }
 @media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 0; } nav.toc { display: none; } main { margin: 0 auto; width: 100%; } }
 
-.abstract { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 22px 26px; margin: 8px 0 34px; }
+.abstract { background: var(--panel); border: 1px solid var(--rule); border-left: 6px solid var(--hot); border-radius: 0; padding: 22px 26px; margin: 8px 0 34px; }
 .abstract h2 { margin-top: 0; }
-h2 { font: 700 26px/1.25 var(--sans); letter-spacing: -.01em; margin: 56px 0 14px; scroll-margin-top: 20px; }
-h2 .n { color: var(--accent); font-family: var(--mono); font-weight: 600; margin-right: 10px; }
-h3 { font: 600 18px/1.3 var(--sans); margin: 30px 0 8px; }
+h2 { font: 400 21px/1.35 var(--display); letter-spacing: .04em; margin: 60px 0 16px; scroll-margin-top: 20px; }
+h2 .n { color: var(--hot); margin-right: 12px; }
+h3 { font: 600 19px/1.3 var(--sans); margin: 30px 0 8px; }
 p { margin: 0 0 16px; }
-.lede { font-size: 20px; }
+.lede { font: 400 19px/1.6 var(--voice); }
 code, .mono { font-family: var(--mono); font-size: .86em; }
 :not(pre) > code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
-pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font: 14px/1.55 var(--mono); margin: 0 0 18px; }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 0; padding: 14px 16px; overflow-x: auto; font: 14px/1.55 var(--mono); margin: 0 0 18px; }
 pre .k { color: var(--accent); } pre .s { color: var(--amber); } pre .c { color: var(--ink-3); font-style: italic; } pre .a { color: var(--hot); } pre .d { color: var(--noise); }
-blockquote { margin: 0 0 18px; padding: 4px 18px; border-left: 3px solid var(--accent); color: var(--ink-2); font-style: italic; }
+blockquote { margin: 0 0 18px; padding: 4px 18px; border-left: 6px solid var(--amber); color: var(--ink-2); font: 400 16px/1.6 var(--voice); }
 
 figure { margin: 26px 0 30px; }
-figure img, figure svg { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 8px; }
+figure img, figure svg { display: block; width: 100%; max-width: 100%; height: auto; border-radius: 0; }
 figure.wide { margin-left: -120px; margin-right: -120px; }
 @media (max-width: 1180px) { figure.wide { margin-left: 0; margin-right: 0; } }
 figure.dark img { box-shadow: 0 10px 30px rgba(0,0,0,.25), 0 0 0 1px var(--rule); }
@@ -95,7 +98,7 @@ figcaption b { color: var(--ink); }
 
 table { width: 100%; border-collapse: collapse; font: 400 14px/1.45 var(--sans); margin: 8px 0 22px; }
 th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-th { font-weight: 600; color: var(--ink-2); font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
+th { font: 400 10px/1.4 var(--display); color: var(--ink-2); letter-spacing: .12em; text-transform: uppercase; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td code { font-size: 12.5px; }
 .tablewrap { overflow-x: auto; }
@@ -103,11 +106,11 @@ td code { font-size: 12.5px; }
 .loss { color: var(--ink-3); }
 .pill { display: inline-block; font: 600 11px/1 var(--sans); padding: 4px 7px; border-radius: 4px; background: var(--code-bg); color: var(--ink-2); }
 
-.callout { border: 1px solid var(--rule); background: var(--panel); border-radius: 10px; padding: 16px 20px; margin: 22px 0; font: 400 15.5px/1.55 var(--sans); }
+.callout { border: 1px solid var(--rule); background: var(--panel); border-radius: 0; padding: 16px 20px; margin: 22px 0; font: 400 15.5px/1.55 var(--sans); }
 .callout .h { font: 700 12px/1 var(--sans); letter-spacing: .16em; color: var(--hot); text-transform: uppercase; margin-bottom: 8px; }
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0 26px; }
-.stat { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; }
-.stat .v { font: 700 26px/1.1 var(--sans); color: var(--accent); font-variant-numeric: tabular-nums; }
+.stat { background: var(--panel); border: 1px solid var(--rule); border-radius: 0; padding: 14px; border-top: 4px solid var(--accent); }
+.stat .v { font: 400 22px/1.1 var(--display); color: var(--accent); font-variant-numeric: tabular-nums; }
 .stat .l { font: 400 12.5px/1.35 var(--sans); color: var(--ink-2); margin-top: 6px; }
 @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
@@ -118,7 +121,7 @@ svg .dim { fill: var(--ink-3); }
 .bib { position: relative; }
 .bib button { position: absolute; top: 10px; right: 10px; font: 600 12px/1 var(--sans); background: var(--panel); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 10px; cursor: pointer; }
 footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align: center; font: 400 13px/1.6 var(--sans); color: var(--ink-3); }
-.themebtn { position: fixed; right: 16px; top: 16px; z-index: 10; font: 600 12px/1 var(--sans); background: rgba(5,7,11,.6); color: #d9eef5; border: 1px solid rgba(0,229,255,.4); border-radius: 999px; padding: 8px 12px; cursor: pointer; backdrop-filter: blur(6px); }
+.themebtn { position: fixed; right: 16px; top: 16px; z-index: 10; font: 400 10px/1 var(--display); letter-spacing: .12em; background: rgba(14,13,11,.75); color: #ece4d3; border: 1px solid rgba(236,228,211,.45); border-radius: 0; padding: 9px 12px; cursor: pointer; backdrop-filter: blur(6px); }
 </style>
 </head>
 <body>
@@ -127,22 +130,24 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
 <header class="hero">
   <div class="hero-inner">
     <div class="kicker">Technical report · October 2026</div>
-    <h1>ARGMAX</h1>
+    <h1><svg viewBox="0 0 120 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#2f61ff"/><rect x="44" y="4" width="32" height="32" fill="#ff4626"/><polygon points="100,3 119,37 81,37" fill="#f4c20d"/></svg>ARGMAX</h1>
     <p class="subtitle">Programming swarms by writing the function they maximize</p>
     <p class="tagline">a deterministic swarm RTS on SpacetimeDB · Unity 6 · ML-Agents · Jev</p>
     <div class="authors">Eliáš Bauer <span>· built with Claude Code</span></div>
     <div class="links">
+      <a href="play/">Play in the browser</a>
+      <a href="https://github.com/WalterGropius/argmax/releases/latest">Download</a>
       <a href="https://github.com/WalterGropius/argmax">Code</a>
       <a href="https://github.com/WalterGropius/argmax#quick-start">Quick start</a>
       <a href="https://github.com/WalterGropius/argmax/blob/main/docs/DESIGN.md">Design doc</a>
       <a href="#cite">Cite</a>
     </div>
     <div class="teaser">
-      <video autoplay muted loop playsinline preload="auto" poster="media/poster.png" aria-label="Gameplay: fused high-value units attack a swarm of small units">
+      <video autoplay muted loop playsinline preload="auto" poster="media/poster.jpg" aria-label="Gameplay: fused high-value units attack a swarm of small units">
         <source src="media/argmax-battle.mp4" type="video/mp4">
       </video>
     </div>
-    <p class="figcap"><b>Figure 1.</b> Two metaprograms, no humans. TURTLE's fused <b>512</b> and <b>256</b> (pink diamonds) cut through OVERMIND's checkerboard of 2s (cyan) and push on its core. Every frame is the deterministic simulation the server runs (seed 30, ticks 1593–2073), rendered in Unity with one instanced draw per 1023 units.</p>
+    <p class="figcap"><b>Figure 1.</b> Two metaprograms, no humans, rendered in MORPH mode: allies smooth-union into organic masses over a reaction-diffusion floor, and fused high values loom large. Every frame is the deterministic simulation the server runs, raymarched in one pass.</p>
   </div>
 </header>
 
@@ -158,6 +163,8 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
       <li><a href="#blanket">Coherence, stigmergy, Noise</a></li>
       <li><a href="#commanders">Commanders</a></li>
       <li><a href="#chambers">Test chambers</a></li>
+      <li><a href="#campaign">The campaign</a></li>
+      <li><a href="#look">MORPH and GRID</a></li>
       <li><a href="#arch">One simulation, three hosts</a></li>
       <li><a href="#determinism">Determinism</a></li>
       <li><a href="#perf">Performance</a></li>
@@ -171,7 +178,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
 <main>
   <section class="abstract">
     <h2 style="font-size:20px">Abstract</h2>
-    <p>ARGMAX is a real-time strategy game in which players do not issue most orders: they write the scoring function their units maximize. Every unit, every tick, answers a single typed choice question, <em>which of these nine tiles?</em>, with a softmax over thirteen integer features read from its 5×5 neighbourhood and from world-broadcast gradient fields. A unit's program, written in a small language called <b>Argot</b>, supplies the weights, which makes every program a linear softmax classifier. Units carry 2048-style values from 2 to 2048 and fuse on contact; a held 2048 wins the match. Macro play is delegated to <em>commanders</em> that all emit the same four-field decision: Argot metaprograms running inside the server, a PPO policy trained by ML-Agents self-play, TypeSafe's Jev answering typed questions about the battlefield, or the human. One integer-only C# simulation compiles unchanged into a SpacetimeDB module, the Unity client and the training gym; we verify bit-identical state hashes across native .NET, Unity's Mono runtime, SpacetimeDB running locally and on maincloud.</p>
+    <p>ARGMAX is a real-time strategy game in which players do not issue most orders: they write the scoring function their units maximize. Every unit, every tick, answers a single typed choice question, <em>which of these nine tiles?</em>, with a softmax over thirteen integer features read from its 5×5 neighbourhood and from world-broadcast gradient fields. A unit's program, written in a small language called <b>Argot</b>, supplies the weights, which makes every program a linear softmax classifier. Units carry 2048-style values from 2 to 2048 and fuse on contact; a held 2048 wins the match. Macro play is delegated to <em>commanders</em> that all emit the same four-field decision: Argot metaprograms running inside the server, a PPO policy trained by ML-Agents self-play, TypeSafe's Jev answering typed questions about the battlefield, or the human. One integer-only C# simulation compiles unchanged into a SpacetimeDB module, the Unity client and the training gym; we verify bit-identical state hashes across native .NET, Unity's Mono runtime, SpacetimeDB running locally and on maincloud. A 28-test campaign teaches the game the way Turing Complete teaches hardware: each test unlocks a few words of Argot and one computer-science concept, and every level's reference solution is verified by the test suite.</p>
   </section>
 
   <section id="intro">
@@ -227,11 +234,11 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
     <p>The world, not the unit, does the global reasoning. Multi-source BFS fields over passable cells (8-connected, corner-cutting forbidden, portals as zero-cost edges) give distance-to-scrap, distance-to-home, distance-to-beacon and distance-to-enemy-core. A field is recomputed only when its sources change: scrap nodes deplete, a beacon moves. A unit's feature is the clipped gradient \(f(k) = 8\cdot\operatorname{clip}(d_{\text{here}} - d_k, -2, 2)\).</p>
     <figure class="wide dark">
       <div class="grid3">
-        <img src="screens/fields-0.png" alt="Scrap gradient field shown in amber with isolines flowing around ruins" loading="lazy">
-        <img src="screens/fields-1.png" alt="Enemy core gradient field shown in pink" loading="lazy">
-        <img src="screens/fields-2.png" alt="Beacon gradient field shown in cyan around the player's rally point" loading="lazy">
+        <img src="screens/fields-0.jpg" alt="Scrap gradient field shown in amber with isolines flowing around ruins" loading="lazy">
+        <img src="screens/fields-1.jpg" alt="Enemy core gradient field shown in pink" loading="lazy">
+        <img src="screens/fields-2.jpg" alt="Beacon gradient field shown in cyan around the player's rally point" loading="lazy">
       </div>
-      <figcaption><b>Figure 3.</b> The three gradients units read, as rendered by the in-game field overlay (key <span class="pill">F</span>): scrap (amber), enemy core (pink) and the player's beacon (cyan). Isolines every four tiles bend around ruins; portals make far edges adjacent. A program that says <code>seek beacon 4</code> follows the cyan slope; nothing searches.</figcaption>
+      <figcaption><b>Figure 3.</b> The gradients units read, shown by the in-game field view (key <span class="pill">F</span>): scrap (chrome), the enemy core (vermilion) and the player's beacon (cobalt). In MORPH mode a field is drawn as water: ripples flow down the BFS distance toward their source, bending around ruins and through portals. A program that says <code>seek beacon 4</code> follows that slope; nothing searches.</figcaption>
     </figure>
   </section>
 
@@ -347,8 +354,84 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
     <blockquote>"The wall is not the puzzle. The wall is a wall. Your units do not search. They feel a gradient and lean." (PROCTOR, chamber 03)</blockquote>
   </section>
 
+  <section id="campaign">
+    <h2><span class="n">9</span>BOOT SEQUENCE: learning by doing</h2>
+    <p class="lede">Turing Complete teaches computer architecture by making you build the computer. The campaign does the same for a swarm's mind: you start with a mouse and three dots, and you earn every word of Argot by using it.</p>
+    <p>The campaign is 28 tests in six chapters: <b>HANDS</b> (StarCraft-style orders, production, reprogramming), <b>RULES</b> (one word at a time: <code>always</code>, <code>when</code>, <code>not</code>, <code>and</code>, weights, flocking), <b>FIELDS</b> (greed and its local optima, BFS wavefronts, multi-source fields, portals as graph edges), <b>NUMBERS</b> (binary carries, exact change with powers of two, armor, batching), <b>TIME</b> (round-robin scheduling on a clock, the Command pattern, stigmergy, code as data) and <b>MINDS</b> (metaprograms, a genetic algorithm, reward hacking, and OVERMIND). Every test introduces one mechanic and one computer-science idea. The editor accepts only the words taught so far and names the test where a locked word is learned. A pass awards a concept card, and where the idea maps onto a classic interview problem, an <em>interview echo</em>: multi-source BFS is LeetCode 542 and 994, popcount is 191, round-robin with cooldowns is 621.</p>
+    <figure class="wide dark">
+      <div class="grid2">
+        <img src="screens/campaign-map.jpg" alt="The curriculum map with six chapters of tests" loading="lazy">
+        <img src="screens/campaign-level.jpg" alt="A campaign test: the word-gated editor, the objective and PROCTOR's briefing over the arena" loading="lazy">
+      </div>
+      <figcaption><b>Figure 5.</b> Left: the curriculum. Right: a test in progress. The editor shows every Argot word: taught words are bright and insert on click, new words glow amber, and locked words are dimmed with the test that teaches them. The world stays frozen at tick 0 until you press RUN, and STEP advances one tick at a time.</figcaption>
+    </figure>
+    <h3>Levels are data, and every one is verified</h3>
+    <p>A level is a <code>ChamberSpec</code>: an ASCII map with placed units, goals (occupy, mine, forge, an exact sum using at most <i>k</i> motes, siege, eliminate, survive, count, all optionally held for <i>N</i> ticks or under a loss budget), the hands it permits, its vocabulary, a reference solution or scripted hands, and par values. The test suite plays every level's reference and also asserts that its <em>starter code fails</em>; a level the starter already passes isn't a puzzle. Tuning followed the player's own loop: write, run, read the trace, adjust. In the first cut of 3-1 (GREEDY), Chebyshev-greedy motes simply slid around a too-short wall. The rebuilt cup traps a greedy swarm completely, and the shortest solution found is <code>always: spread 3</code> plus <code>when lonely: seek order 1</code>, which is exploration before exploitation.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>test</th><th>title</th><th>kind</th><th>new words</th><th>concept</th></tr></thead>
+      <tbody>
+        <tr><td>1-1</td><td>BOOT</td><td>hands</td><td></td><td>THE TICK</td></tr>
+        <tr><td>1-2</td><td>ATTACK-MOVE</td><td>hands</td><td></td><td>IMPERATIVE vs DECLARATIVE</td></tr>
+        <tr><td>1-3</td><td>FACTORY</td><td>hands</td><td></td><td>VALUE IS COST</td></tr>
+        <tr><td>1-4</td><td>STRATEGY</td><td>hands</td><td></td><td>STRATEGY PATTERN</td></tr>
+        <tr><td>1-5</td><td>FIRST CONTACT</td><td>hands</td><td></td><td>FEEDBACK LOOPS</td></tr>
+        <tr><td>2-1</td><td>HELLO, WORLD</td><td>code</td><td><code>always seek beacon</code></td><td>A PROGRAM IS A FUNCTION</td></tr>
+        <tr><td>2-2</td><td>IF</td><td>code</td><td><code>when enemy avoid</code></td><td>CONDITIONALS</td></tr>
+        <tr><td>2-3</td><td>NOT</td><td>code</td><td><code>not full mine home</code></td><td>FINITE STATE MACHINE</td></tr>
+        <tr><td>2-4</td><td>AND</td><td>code</td><td><code>and hurt outnumbered</code></td><td>BOOLEAN AND</td></tr>
+        <tr><td>2-5</td><td>OR</td><td>code</td><td><code>carrying scrap</code></td><td>OR IS TWO RULES</td></tr>
+        <tr><td>2-6</td><td>WEIGHTS</td><td>code</td><td><code>spread hold</code></td><td>THE WEIGHTED SUM</td></tr>
+        <tr><td>2-7</td><td>FLOCK</td><td>code</td><td><code>flock allies lonely</code></td><td>EMERGENCE</td></tr>
+        <tr><td>3-1</td><td>GREEDY</td><td>code</td><td><code>order wander</code></td><td>GREEDY ALGORITHMS</td></tr>
+        <tr><td>3-2</td><td>WAVEFRONT</td><td>code + hands</td><td><code>beacon</code></td><td>BREADTH-FIRST SEARCH</td></tr>
+        <tr><td>3-3</td><td>TWO SOURCES</td><td>code</td><td></td><td>MULTI-SOURCE BFS</td></tr>
+        <tr><td>3-4</td><td>WORMHOLE</td><td>code</td><td></td><td>GRIDS ARE GRAPHS</td></tr>
+        <tr><td>4-1</td><td>FUSION</td><td>code</td><td><code>merge pair</code></td><td>BINARY CARRY</td></tr>
+        <tr><td>4-2</td><td>EXACT CHANGE</td><td>hands</td><td><code>split</code></td><td>BINARY</td></tr>
+        <tr><td>4-3</td><td>ARMOR</td><td>code</td><td><code>big contact form checker rows cols grid diag</code></td><td>COST PER OPERATION</td></tr>
+        <tr><td>4-4</td><td>CONVICTION</td><td>code</td><td><code>core siege</code></td><td>BATCHING</td></tr>
+        <tr><td>5-1</td><td>ROUND ROBIN</td><td>code</td><td><code>clock</code></td><td>TIME-SLICING</td></tr>
+        <tr><td>5-2</td><td>COMMAND</td><td>code + hands</td><td></td><td>COMMAND PATTERN</td></tr>
+        <tr><td>5-3</td><td>PHEROMONE</td><td>code</td><td><code>mark trail</code></td><td>STIGMERGY</td></tr>
+        <tr><td>5-4</td><td>REWRITE</td><td>code</td><td><code>infect wild holdfire</code></td><td>CODE IS DATA</td></tr>
+        <tr><td>6-1</td><td>METAPROGRAM</td><td>@meta</td><td><code>@meta produce spawn army attack retreat front workers rich poor threat ahead</code></td><td>HIGHER-ORDER PROGRAMS</td></tr>
+        <tr><td>6-2</td><td>EVOLUTION</td><td>evolve</td><td><code>crowded tiny</code></td><td>GENETIC ALGORITHMS</td></tr>
+        <tr><td>6-3</td><td>THE GENIE</td><td>evolve</td><td></td><td>REWARD HACKING</td></tr>
+        <tr><td>6-4</td><td>OVERMIND</td><td>duel</td><td></td><td>YOU</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Evolution, and the genie</h3>
+    <p>Test 6-2 hands the player a genetic algorithm. The genome is the gain of each rule in a template (zero disables a rule). Fitness is a player-weighted mix of goal progress, survival and speed, minus a small symbol penalty, measured by running the level on the deterministic simulation. With a population of 16, elitism of 3, tournament selection, uniform crossover and mutation, it finds a passing program for the gauntlet in about ten generations, roughly a second of CPU, and the champion is readable Argot. Test 6-3 presets the reward to <em>survival only</em>. Evolution then converges to <code>always: hold</code>: perfect fitness, nothing dies, and the test fails, because the motes never leave the start. Weighting progress again evolves a passing program. Both outcomes are unit tests, so the lesson can't silently regress.</p>
+    <figure class="wide dark">
+      <div class="grid2">
+        <img src="screens/campaign-concept.jpg" alt="Test passed: three stars and a concept card about finite state machines" loading="lazy">
+        <img src="screens/campaign-evolve.jpg" alt="The evolution panel: fitness weights, the best and mean fitness per generation and the evolved program" loading="lazy">
+      </div>
+      <figcaption><b>Figure 6.</b> Left: passing 2-3 (two rules, two states) unlocks the finite-state-machine card, with the interview echo underneath. Right: the evolution lab after sixty generations, with the champion's source code below the chart.</figcaption>
+    </figure>
+    <blockquote>"You were never the commander. You were the model." (PROCTOR, epilogue)</blockquote>
+  </section>
+
+  <section id="look">
+    <h2><span class="n">10</span>Two looks: MORPH and GRID</h2>
+    <p class="lede">Bauhaus geometry meets morphogenesis: digital rules, organic results.</p>
+    <p>The palette is warm ink and bone with the three primaries, assigned as Kandinsky assigned them: the player is cobalt circles, the opponent vermilion squares, the Noise chrome triangles. <b>GRID</b> draws exactly that, as instanced flat shapes with cut-paper shadows and Kandinsky rings that multiply as values grow. <b>MORPH</b>, the default, raymarches the same world as signed distance fields in a single pass. The CPU writes three tiny per-cell textures each frame (which faction stands where, its radius, and its offset mid-move), and the shader evaluates each point against its 3×3 neighbourhood. Allies combine with a polynomial smooth minimum, \(\operatorname{smin}(a,b,k) = \min(a,b) - \tfrac{k}{4}\max(k-|a-b|,0)^2/k^2\), so adjacent motes bridge into one mass and a 2048 fusion is two blobs melting together. Walls are extruded from a 2D wall distance field baked once per map, so the grid is implicit: it survives only in where things are.</p>
+    <p>The floor runs a Gray-Scott reaction-diffusion on the GPU (Turing's morphogenesis, 1952), and each faction's territory has its own feed and kill rates: spots under cobalt, labyrinths under vermilion, worms under the Noise, coral where nobody stands. Units seed the pattern where they stand, so the floor is a slow record of the war. Gradient fields render as water, after Theodor Schwenk: ripples travel down the BFS distance toward their source. A small print pipeline finishes the frame. Colours below a soft shoulder pass through exactly, highlights roll off, the colour plates sit a fraction of a pixel out of register like a risograph, and there is paper grain. All of it is about 400 lines of shader on Unity's built-in pipeline, with no packages.</p>
+    <figure class="wide dark">
+      <div class="grid2">
+        <img src="screens/campaign-morph.jpg" alt="MORPH: raymarched blobs merging over a reaction-diffusion floor" loading="lazy">
+        <img src="screens/campaign-grid.jpg" alt="GRID: flat Bauhaus shapes with cut-paper shadows" loading="lazy">
+      </div>
+      <figcaption><b>Figure 7.</b> The same tick of test 1-5 in both looks (key <span class="pill">G</span>). Left, MORPH: cobalt matter fuses where allies touch, and the floor has begun to grow its pattern. Right, GRID: circles, an ink floor with registration crosses for a grid, and the cores as solid blocks.</figcaption>
+    </figure>
+    <figure class="wide dark">
+      <img src="screens/menu-hero.jpg" alt="The menu: a constructed lowercase logotype beside a Bauhaus composition" loading="lazy">
+      <figcaption><b>Figure 8.</b> The logotype is built rather than typeset: after Herbert Bayer's universal alphabet, each letter is a circle, an arc or a bar on one x-height, with a vermilion disc in the first bowl and a chrome triangle at the crossing of the x. The interface sets labels in Michroma, reading text in Jost, PROCTOR's voice in Comfortaa and code in Space Mono (all SIL OFL), and switches to Futura or Alte Haas Grotesk when the system has them.</figcaption>
+    </figure>
+  </section>
+
   <section id="arch">
-    <h2><span class="n">9</span>One simulation, three hosts</h2>
+    <h2><span class="n">11</span>One simulation, three hosts</h2>
     <figure>
       <svg viewBox="0 0 760 330" role="img" aria-label="Architecture: one shared simulation compiled into the SpacetimeDB module, the Unity client and the ML-Agents gym">
         <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--ink-3)"/></marker></defs>
@@ -382,7 +465,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
         </g>
         <text x="20" y="306" font-size="12.5" class="dim">dashed: subscriptions (rows, effects) flow to clients; reducers (issue, set_pilot, submit_chamber…) flow back</text>
       </svg>
-      <figcaption><b>Figure 5.</b> The same source files compile into all three hosts; there is no port to drift. The client never simulates authoritatively online: it mirrors subscribed rows into a read-only World each server tick and interpolates.</figcaption>
+      <figcaption><b>Figure 9.</b> The same source files compile into all three hosts; there is no port to drift. The client never simulates authoritatively online: it mirrors subscribed rows into a read-only World each server tick and interpolates.</figcaption>
     </figure>
     <p><b>Server tick.</b> Each live match's World is kept hot in module memory and validated against its Match row (tick, state hash, revision), so rows remain the source of truth. Pending commands are applied in id order, the simulation steps once, and only changed rows are written. Effects (shots, deaths, merges, conversions, teleports) go out through an <em>event table</em>, broadcast and never cached. The 10 Hz heartbeat exists only while a match is live, so an idle database costs nothing. Seed plus <code>CmdLog</code> reproduces any match exactly; that log is also imitation-learning data.</p>
     <div class="tablewrap"><table>
@@ -395,7 +478,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
   </section>
 
   <section id="determinism">
-    <h2><span class="n">10</span>Determinism</h2>
+    <h2><span class="n">12</span>Determinism</h2>
     <p>Integer arithmetic only; a baked softmax table; randomness as a pure hash of (seed, tick, id); sorted iteration; static terrain regenerated from the seed instead of stored. Golden state hashes are asserted in three test suites:</p>
     <div class="tablewrap"><table>
       <thead><tr><th>host</th><th>runtime</th><th class="num">seed 42, 300 ticks</th><th class="num">seed 77, 1000 ticks</th></tr></thead>
@@ -410,7 +493,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
   </section>
 
   <section id="perf">
-    <h2><span class="n">11</span>Performance</h2>
+    <h2><span class="n">13</span>Performance</h2>
     <p>C# SpacetimeDB modules execute on the .NET wasm interpreter, roughly 70× slower than native for this workload. The first server tick cost about 130 ms at 280 units, over a 100 ms budget. Profiling separated simulation from I/O. Most of the time was the simulation, so the fix went into the shared code and sped up every host:</p>
     <ul>
       <li>a precomputed per-cell table of the nine step targets replaces method calls in BFS and movement;</li>
@@ -433,7 +516,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
           <rect x="80" y="164" width="14" height="12" fill="var(--accent)"/><text x="100" y="175" class="dim" font-size="12">after (≈250–280 units)</text>
         </g>
       </svg>
-      <figcaption><b>Figure 6.</b> Server cost per tick on the .NET wasm interpreter, measured on a local SpacetimeDB.</figcaption>
+      <figcaption><b>Figure 10.</b> Server cost per tick on the .NET wasm interpreter, measured on a local SpacetimeDB.</figcaption>
     </figure>
     <div class="stats">
       <div class="stat"><div class="v">~11×</div><div class="l">faster simulation inside the module</div></div>
@@ -444,8 +527,8 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
   </section>
 
   <section id="experiments">
-    <h2><span class="n">12</span>Experiments</h2>
-    <h3>12.1 Metaprogram round robin</h3>
+    <h2><span class="n">14</span>Experiments</h2>
+    <h3>14.1 Metaprogram round robin</h3>
     <p>Twelve matches, every metaprogram against every other from both seats, simulated in 1.3 s. Earlier rules let ASSEMBLER (fuse everything) sweep 6–0; the arena tool caught it in seconds, and armor and cooldown scaling were retuned until no single strategy took every game.</p>
     <div class="tablewrap"><table>
       <thead><tr><th>seat 0 ↓ / seat 1 →</th><th>OVERMIND</th><th>TURTLE</th><th>LOCUST</th><th>ASSEMBLER</th><th class="num">wins</th></tr></thead>
@@ -456,7 +539,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
         <tr><td><b>ASSEMBLER</b></td><td class="win">ASSEMBLER 4:36</td><td class="loss">TURTLE 3:27</td><td class="win">ASSEMBLER 11:39</td><td>–</td><td class="num">4</td></tr>
       </tbody>
     </table></div>
-    <h3>12.2 Jev as a commander</h3>
+    <h3>14.2 Jev as a commander</h3>
     <p>Jev (<code>jev-1.13.0</code>) commanded seat 0 against OVERMIND for a full match through the live API, deciding every 30 ticks from a ~600-character situation report.</p>
     <div class="stats">
       <div class="stat"><div class="v">300</div><div class="l">decisions, 0 failures</div></div>
@@ -465,7 +548,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
       <div class="stat"><div class="v">350 / 298</div><div class="l">value destroyed, Jev vs OVERMIND</div></div>
     </div>
     <p>The match reached the 15-minute cap with both cores intact. Jev out-mined and out-killed the scripted opponent but lost more units (180 vs 108) and never committed to a final push: it kept choosing <em>attack</em> toward a <em>home</em> beacon, which in Argot semantics means defend. Its answers were confident under pressure (retreat 0.93 when twelve enemies reached the core) and flat in quiet phases (0.3–0.6), which reads like System 1 doing what it is for.</p>
-    <h3>12.3 Self-play training</h3>
+    <h3>14.3 Self-play training</h3>
     <figure>
       <svg viewBox="0 0 760 260" role="img" aria-label="Line chart of mean reward over training steps">
         <g transform="translate(60,20)">
@@ -483,12 +566,12 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
           <text x="530" y="192" font-size="11" fill="var(--hot)">opponent swap</text>
         </g>
       </svg>
-      <figcaption><b>Figure 7.</b> Mean episode reward over the first 128,888 steps (8 arenas × 2 agents, CPU, about 10 minutes). Reward here is mostly economic shaping; every episode hit the time cap, so the policy has not yet learned to win. The dip at 105k is a self-play opponent swap. The run proves the pipeline end to end: trainer and gym connected, both team brains registered, the exported model loaded by Unity's inference engine and piloting a seat. Learning to beat OVERMIND is a matter of hours plus behavioural cloning from its demonstrations.</figcaption>
+      <figcaption><b>Figure 11.</b> Mean episode reward over the first 128,888 steps (8 arenas × 2 agents, CPU, about 10 minutes). Reward here is mostly economic shaping; every episode hit the time cap, so the policy has not yet learned to win. The dip at 105k is a self-play opponent swap. The run proves the pipeline end to end: trainer and gym connected, both team brains registered, the exported model loaded by Unity's inference engine and piloting a seat. Learning to beat OVERMIND is a matter of hours plus behavioural cloning from its demonstrations.</figcaption>
     </figure>
   </section>
 
   <section id="influences">
-    <h2><span class="n">13</span>Influences</h2>
+    <h2><span class="n">15</span>Influences</h2>
     <div class="tablewrap"><table>
       <thead><tr><th>source</th><th>what it became</th></tr></thead>
       <tbody>
@@ -499,7 +582,12 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
         <tr><td>SpaceChem, Replicube</td><td>chambers, symbol counts, histograms, instruction tax, spatial predicates</td></tr>
         <tr><td>The Farmer Was Replaced</td><td>automation by code instead of clicking</td></tr>
         <tr><td>Portal 2</td><td>PROCTOR, test chambers, portals gradients flow through</td></tr>
-        <tr><td>Uplink</td><td>terminal interface; <code>infect</code> rewrites enemy code</td></tr>
+        <tr><td>Uplink</td><td><code>infect</code> rewrites enemy code; PROCTOR's dry voice</td></tr>
+        <tr><td>Turing Complete, Machine Learning: Episode 1, AI Learns to Drive, Little Learning Machines</td><td>the campaign: earn every component, then evolve and train programs</td></tr>
+        <tr><td>The Bauhaus: Herbert Bayer, Wassily Kandinsky</td><td>the constructed logotype; circle, square and triangle as factions; primaries on ink and bone</td></tr>
+        <tr><td>Alan Turing, <i>The Chemical Basis of Morphogenesis</i></td><td>Gray-Scott patterns that the swarms grow on the floor</td></tr>
+        <tr><td>Theodor Schwenk, <i>Sensitive Chaos</i></td><td>gradient fields drawn as water flowing toward their source</td></tr>
+        <tr><td>2swap; Jarl Larsson's raymarched gunk; Inigo Quilez</td><td>MORPH mode: maths you can see, matter made of distance fields</td></tr>
         <tr><td>AI Warehouse, Machine Learning: Episode 1</td><td>the gym as a game mode; visible training; editable rewards</td></tr>
         <tr><td>BitCraft</td><td>everything is a SpacetimeDB row; the server is the database</td></tr>
         <tr><td>TypeSafe Jev</td><td>System-1 movement; Jev as a commander</td></tr>
@@ -509,9 +597,10 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
   </section>
 
   <section id="limits">
-    <h2><span class="n">14</span>Limitations and future work</h2>
+    <h2><span class="n">16</span>Limitations and future work</h2>
     <ul>
       <li>No fog of war yet; client visibility filters per seat are the natural route on SpacetimeDB.</li>
+      <li>Each campaign level is tuned on its single deterministic seed. A robustness pass would vary seeds and check that solutions, not just references, generalize.</li>
       <li>The learned commander needs real training time; behavioural cloning from OVERMIND and imitation from <code>CmdLog</code> replays are wired as next steps.</li>
       <li>Balance across the four presets is a round robin, not a design target; self-play is the intended balance probe.</li>
       <li>A learned movement Jev (distil a policy into Argot weights), feral crossover on merge (evolving Noise), procedural audio from swarm state, and 2v2 coalitions.</li>
@@ -520,7 +609,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
   </section>
 
   <section id="cite">
-    <h2><span class="n">15</span>Citation</h2>
+    <h2><span class="n">17</span>Citation</h2>
     <div class="bib">
 <pre id="bibtex">@misc{bauer2026argmax,
   title        = {ARGMAX: Programming Swarms by Writing the Function They Maximize},
@@ -536,7 +625,7 @@ footer { border-top: 1px solid var(--rule); padding: 28px 16px 48px; text-align:
 </div>
 
 <footer>
-  ARGMAX · <a href="https://github.com/WalterGropius/argmax">github.com/WalterGropius/argmax</a> · built with Claude Code ·
+  ARGMAX · <a href="https://github.com/WalterGropius/argmax">github.com/WalterGropius/argmax</a> · MIT licensed · built with Claude Code ·
   every image on this page was rendered from the game's deterministic simulation
 </footer>
 

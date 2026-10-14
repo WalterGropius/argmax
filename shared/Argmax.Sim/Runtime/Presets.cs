@@ -11,6 +11,7 @@ namespace Argmax.Sim
     public static class Presets
     {
         public const uint Swarm = 1, Harvest = 2, Fuse = 3, Raid = 4, Ward = 5, Hive = 6, Pulse = 7, Ant = 8, Lattice = 9;
+        public const uint Drone = 10, Sentry = 11, Biter = 12, Prowler = 13;
         public const uint Overmind = 100, Turtle = 101, Locust = 102, Assembler = 103;
 
         public static readonly uint[] DefaultLoadout = { Swarm, Harvest, Fuse, Raid, Ward, Hive };
@@ -90,6 +91,30 @@ always: form checker 3
 always: spread
 when order: seek order 2
 when contact: hold",
+
+            [Drone] =
+@"@name DRONE
+# factory default: go where told, shoot what is near
+when order: seek order 3
+when not order: hold",
+
+            [Sentry] =
+@"@name SENTRY
+# holds its ground and shoots
+always: hold",
+
+            [Biter] =
+@"@name BITER
+# noise with teeth
+when enemy: seek enemy 2
+when not enemy: wander 2",
+
+            [Prowler] =
+@"@name PROWLER
+# hunts in packs, runs when hurt
+when enemy and not hurt: seek enemy 3
+when hurt: avoid enemy 3
+always: flock",
 
             [Overmind] =
 @"@meta

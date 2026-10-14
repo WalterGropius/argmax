@@ -20,7 +20,9 @@ namespace ArgmaxClient
         public Func<bool> PointerOverUi = () => false;
         public Func<bool> KeyboardCaptured = () => false;
         public Action<string> Feedback;
-        public Action ToggleEditor, ToggleInspector, Escape;
+        public Action ToggleEditor, ToggleInspector, Escape, ToggleLook;
+        /// <summary>The campaign hands out commands one lesson at a time.</summary>
+        public Func<CmdKind, bool> Allowed = _ => true;
         readonly Dictionary<int, List<uint>> groups = new Dictionary<int, List<uint>>();
         static readonly KeyCode[] SlotKeys = { KeyCode.Q, KeyCode.W, KeyCode.E, KeyCode.R, KeyCode.T, KeyCode.Y };
         float lastClick;
@@ -41,7 +43,8 @@ namespace ArgmaxClient
                 if (Mode == Cursor.Attack && rig.Ground(mouse, out var hit)) { Order(s, view, CmdKind.Attack, hit); if (!Input.GetKey(KeyCode.LeftShift)) Mode = Cursor.None; return; }
                 if (Mode == Cursor.Beacon && rig.Ground(mouse, out var bh))
                 {
-                    s.Issue(new Cmd { Seat = (byte)seat, Kind = CmdKind.Beacon, X = (short)Mathf.FloorToInt(bh.x), Y = (short)Mathf.FloorToInt(bh.z) });
+                    Issue(s, new Cmd { Seat = (byte)seat, Kind = CmdKind.Beacon, X = (short)Mathf.FloorToInt(bh.x), Y = (short)Mathf.FloorToInt(bh.z) });
+                    Audio.Play(Sfx.Beacon, 0.6f);
                     Feedback?.Invoke("beacon placed: programs that `seek beacon` now flow toward it");
                     Mode = Cursor.None;
                     return;
@@ -62,6 +65,7 @@ namespace ArgmaxClient
                     lastClick = Time.unscaledTime;
                     if (id != 0)
                     {
+                        Audio.Play(Sfx.Select, 0.5f);
                         if (dbl) SelectSameProgram(w, view, id, rig.Cam);
                         else if (add && view.Selected.Contains(id)) view.Selected.Remove(id);
                         else view.Selected.Add(id);
@@ -76,6 +80,7 @@ namespace ArgmaxClient
                         var sp = rig.Cam.WorldToScreenPoint(d.Pos);
                         if (sp.z > 0 && r.Contains(new Vector2(sp.x, sp.y))) view.Selected.Add(d.Id);
                     }
+                    if (view.Selected.Count > 0) Audio.Play(Sfx.Select, 0.5f);
                 }
             }
             if (Input.GetMouseButtonDown(1) && !overUi)
@@ -92,6 +97,7 @@ namespace ArgmaxClient
             if (Input.GetKeyDown(KeyCode.Escape)) { if (Mode != Cursor.None) Mode = Cursor.None; else Escape?.Invoke(); }
             if (Input.GetKeyDown(KeyCode.Tab)) ToggleEditor?.Invoke();
             if (Input.GetKeyDown(KeyCode.I)) ToggleInspector?.Invoke();
+            if (Input.GetKeyDown(KeyCode.G)) ToggleLook?.Invoke();
             if (Input.GetKeyDown(KeyCode.F)) { view.FieldMode = (view.FieldMode + 1) % WorldView.FieldNames.Length; Feedback?.Invoke("field view: " + WorldView.FieldNames[view.FieldMode]); }
             if (Input.GetKeyDown(KeyCode.Space) && seat < 2 && w.Map.HasCore[seat]) rig.Focus = new Vector3(w.Map.CoreX[seat] + 0.5f, 0, w.Map.CoreY[seat] + 0.5f);
             if (Input.GetKeyDown(KeyCode.P)) s.Paused = !s.Paused;
@@ -99,15 +105,15 @@ namespace ArgmaxClient
             if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus)) s.Speed = Mathf.Max(0.25f, s.Speed * 0.5f);
             if (!s.CanCommand) return;
 
-            if (Input.GetKeyDown(KeyCode.A) && view.Selected.Count > 0) Mode = Cursor.Attack;
-            if (Input.GetKeyDown(KeyCode.B)) Mode = Cursor.Beacon;
-            if (Input.GetKeyDown(KeyCode.C)) s.Issue(new Cmd { Seat = (byte)seat, Kind = CmdKind.ClearBeacon });
+            if (Input.GetKeyDown(KeyCode.A) && view.Selected.Count > 0 && Check(CmdKind.Attack)) Mode = Cursor.Attack;
+            if (Input.GetKeyDown(KeyCode.B) && Check(CmdKind.Beacon)) Mode = Cursor.Beacon;
+            if (Input.GetKeyDown(KeyCode.C)) Issue(s, new Cmd { Seat = (byte)seat, Kind = CmdKind.ClearBeacon });
             if (Input.GetKeyDown(KeyCode.S)) Unit(s, view, CmdKind.Stop);
             if (Input.GetKeyDown(KeyCode.H)) Unit(s, view, CmdKind.Hold);
             if (Input.GetKeyDown(KeyCode.M)) { Unit(s, view, CmdKind.Merge); Feedback?.Invoke("merge: equal values that touch will fuse"); }
             if (Input.GetKeyDown(KeyCode.X)) Unit(s, view, CmdKind.Split);
-            if (Input.GetKeyDown(KeyCode.U)) s.Issue(new Cmd { Seat = (byte)seat, Kind = CmdKind.Auto, Arg = w.Seats[seat].Auto ? 0u : 1u });
-            if (Input.GetKeyDown(KeyCode.Z)) s.Issue(new Cmd { Seat = (byte)seat, Kind = CmdKind.Spawn, Arg = shift ? 5u : 1u });
+            if (Input.GetKeyDown(KeyCode.U)) { Issue(s, new Cmd { Seat = (byte)seat, Kind = CmdKind.Auto, Arg = w.Seats[seat].Auto ? 0u : 1u }); Feedback?.Invoke(w.Seats[seat].Auto ? "auto-build off" : "auto-build on"); }
+            if (Input.GetKeyDown(KeyCode.Z)) Issue(s, new Cmd { Seat = (byte)seat, Kind = CmdKind.Spawn, Arg = shift ? 5u : 1u });
             for (int k = 0; k < SlotKeys.Length; k++)
             {
                 if (!Input.GetKeyDown(SlotKeys[k])) continue;
@@ -116,7 +122,7 @@ namespace ArgmaxClient
                     uint prog = w.Seats[seat].Loadout[k];
                     if (prog != 0) { Unit(s, view, CmdKind.Reprogram, prog); Feedback?.Invoke("reprogrammed " + view.Selected.Count + " motes to " + (w.GetProgram(prog)?.Name ?? "?")); }
                 }
-                else s.Issue(new Cmd { Seat = (byte)seat, Kind = CmdKind.Produce, Arg = (uint)k });
+                else if (Issue(s, new Cmd { Seat = (byte)seat, Kind = CmdKind.Produce, Arg = (uint)k })) Feedback?.Invoke("core builds slot " + (k + 1) + ": " + (w.GetProgram(w.Seats[seat].Loadout[k])?.Name ?? "empty"));
             }
             for (int d = 1; d <= 9; d++)
             {
@@ -130,17 +136,32 @@ namespace ArgmaxClient
             }
         }
 
+        bool Check(CmdKind kind)
+        {
+            if (Allowed(kind)) return true;
+            Audio.Play(Sfx.Error, 0.5f);
+            Feedback?.Invoke(kind.ToString().ToUpperInvariant() + " is not available in this test");
+            return false;
+        }
+
+        bool Issue(ISession s, Cmd c)
+        {
+            if (!Check(c.Kind)) return false;
+            s.Issue(c);
+            return true;
+        }
+
         void Order(ISession s, WorldView view, CmdKind kind, Vector3 hit)
         {
             if (view.Selected.Count == 0) return;
-            s.Issue(new Cmd { Kind = kind, X = (short)Mathf.FloorToInt(hit.x), Y = (short)Mathf.FloorToInt(hit.z), Ids = Ids(view) });
+            if (!Issue(s, new Cmd { Kind = kind, X = (short)Mathf.FloorToInt(hit.x), Y = (short)Mathf.FloorToInt(hit.z), Ids = Ids(view) })) return;
             view.PingOrder(hit, kind == CmdKind.Attack);
         }
 
         void Unit(ISession s, WorldView view, CmdKind kind, uint arg = 0)
         {
             if (view.Selected.Count == 0) return;
-            s.Issue(new Cmd { Kind = kind, Arg = arg, Ids = Ids(view) });
+            Issue(s, new Cmd { Kind = kind, Arg = arg, Ids = Ids(view) });
         }
 
         static uint[] Ids(WorldView view)

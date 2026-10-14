@@ -26,16 +26,23 @@ namespace ArgmaxClient
         public WorldView View { get; private set; }
         public Ui Ui { get; private set; }
         public CommandInput Commands { get; private set; }
+        public CampaignProgress Progress { get; private set; }
+        public CampaignUi Campaign { get; private set; }
 
         bool inGame, endShown, framed, spectating;
         int maxTierSeen, coreWarned, chamberId;
+        string framedFor;
         bool singularityWarned, enemySingularityWarned;
         NetSession records;
         System.Action again;
 
         void Awake()
         {
+#if UNITY_WEBGL
+            Application.targetFrameRate = -1; // the browser paces frames
+#else
             Application.targetFrameRate = 120;
+#endif
             Application.runInBackground = true;
             Settings = Settings.Load();
             Rig = CameraRig.Create();
@@ -49,17 +56,30 @@ namespace ArgmaxClient
             ps.match = 0.5f;
             var doc = gameObject.AddComponent<UIDocument>();
             doc.panelSettings = ps;
+            Audio.Init(gameObject);
+            Audio.Muted = Settings.Muted;
+            Audio.Music = Settings.MusicOn ? 0.45f : 0f;
             Ui = new Ui(this);
             Ui.Build(doc);
+            Progress = CampaignProgress.Load();
+            Campaign = new CampaignUi(this, Progress);
+            Campaign.Build(Ui.Root);
+            Ui.BringOverlaysToFront();
+            TypeKit.Apply(Ui.Root);
             View.Init(Rig.Cam, Ui.Labels);
+            View.Shake = a => Rig.AddShake(a);
+            View.Morph = Settings.Morph;
+            Ui.RefreshLook();
 
             Commands = new CommandInput
             {
                 PointerOverUi = Ui.PointerOverUi,
                 KeyboardCaptured = Ui.Typing,
                 Feedback = s => Ui.Toast(s),
-                ToggleEditor = () => Ui.ToggleEditor(),
+                ToggleEditor = () => { if (Campaign.Active) Campaign.ToggleEditor(); else Ui.ToggleEditor(); },
                 ToggleInspector = () => Ui.ToggleInspector(),
+                Allowed = k => Campaign.Allows(k),
+                ToggleLook = () => ToggleLook(),
             };
             Rig.PointerOverUi = Ui.PointerOverUi;
             Rig.KeyboardCaptured = Ui.Typing;
@@ -69,6 +89,7 @@ namespace ArgmaxClient
         void Update()
         {
             float dt = Time.deltaTime;
+            Audio.Pump();
             var s = Session;
             s?.Update(dt);
             if (records != null && !ReferenceEquals(records, s)) records.Update(dt);
@@ -78,7 +99,9 @@ namespace ArgmaxClient
                 if (Input.GetKeyDown(KeyCode.RightBracket)) gym.Cycle(1);
             }
             if (!inGame && s is LocalSession attract && (attract.W.Ended || attract.W.Tick > 9000)) StartAttract();
-            if (s is LocalSession ls && ls.W.Chamber != null)
+            Campaign.Update(Time.unscaledDeltaTime);
+            View.Sound = inGame;
+            if (s is LocalSession ls && ls.W.Chamber != null && !Campaign.Active)
             {
                 var c = ls.W.Chamber;
                 ls.Banner = c.Brief + "   " + Chambers.Progress(ls.W) + " / " + c.Target + "   t " + ls.W.Tick / Rules.TickHz + "s / " + c.TimeLimit / Rules.TickHz + "s";
@@ -113,10 +136,20 @@ namespace ArgmaxClient
         {
             var w = s.World;
             framed = true;
+            framedFor = FrameKey(w);
             int seat = s.LocalSeat;
             if (!inGame || spectating)
             {
                 Rig.Frame(w.W, w.H, new Vector3(w.W * 0.5f, 0, w.H * 0.42f), spectating ? 58f : 64f);
+                return;
+            }
+            if (w.Mode == WorldMode.Chamber && Campaign.Active)
+            {
+                // the editor covers the left of the screen and the briefing the top: frame the arena to the right
+                // visible ground width is about 1.44 x camera height; fit the map into the uncovered part
+                bool editor = Campaign.Spec.HasEditor;
+                float hgt = Mathf.Max(20f, Mathf.Max(w.W * (editor ? 1.15f : 0.95f), w.H * 1.9f));
+                Rig.Frame(w.W, w.H, new Vector3(w.W * 0.5f - hgt * (editor ? 0.245f : 0.1f), 0, w.H * 0.5f + hgt * 0.08f), hgt);
                 return;
             }
             if (w.Mode == WorldMode.Chamber) { Rig.Frame(w.W, w.H, new Vector3(w.W * 0.5f, 0, w.H * 0.5f), Mathf.Max(18f, w.W * 0.75f)); return; }
@@ -205,9 +238,38 @@ namespace ArgmaxClient
 
         public void BackToMenu()
         {
+            Campaign.Exit();
+            Campaign.HideAll();
             if (Session is NetSession ns) ns.Leave();
             Ui.ShowMenu();
             StartAttract();
+        }
+
+        /// <summary>G: MORPH (raymarched matter) or GRID (flat Bauhaus shapes).</summary>
+        public void ToggleLook()
+        {
+            if (!View.MorphAvailable) { Ui.Toast("MORPH needs a GPU that can raymarch; staying in GRID"); return; }
+            Settings.Morph = View.Morph = !View.Morph;
+            Settings.Save();
+            Ui.Toast(View.Morph ? "MORPH: the swarm as matter" : "GRID: the swarm as shapes");
+            Ui.RefreshLook();
+        }
+
+        // ================================================================ campaign
+
+        public void StartCampaign() => Campaign.ShowMap();
+
+        public void ContinueCampaign() => Campaign.Enter(Progress.NextLevel());
+
+        /// <summary>The campaign swaps worlds on every RUN/RESET; keep the camera where the player put it.</summary>
+        static string FrameKey(World w) => (w.Chamber != null ? w.Chamber.Id : -1) + ":" + w.W + "x" + w.H;
+
+        public void RunCampaignSession(LocalSession ls, bool frame)
+        {
+            bool keepCamera = !frame && framedFor == FrameKey(ls.W);
+            SetSession(ls, true);
+            again = null;
+            if (keepCamera) framed = true;
         }
 
         void Intro()
@@ -336,6 +398,7 @@ namespace ArgmaxClient
             var w = s.World;
             if (endShown || !w.Ended) return;
             endShown = true;
+            if (Campaign.Active && w.Mode == WorldMode.Chamber) { Campaign.OnEnd(w); return; }
             int seat = s.LocalSeat;
             if (w.Mode == WorldMode.Chamber)
             {

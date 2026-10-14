@@ -757,7 +757,7 @@ namespace Argmax.Sim
         public static int TrySpawn(World w, int s, int count, StepLog log)
         {
             var seat = w.Seats[s];
-            if (!seat.Alive) return 0;
+            if (!seat.Alive || !w.Map.HasCore[s]) return 0;
             var prog = w.GetProgram(seat.Loadout[Math.Min(seat.Production, (byte)(Rules.LoadoutSlots - 1))]);
             if (prog == null) return 0;
             int made = 0;
@@ -799,6 +799,15 @@ namespace Argmax.Sim
             return -1;
         }
 
+        /// <summary>Put a mote on a specific free cell (level setup).</summary>
+        public static bool PlaceMote(World w, int seat, uint program, int tier, int x, int y)
+        {
+            if (w.S == null) Prepare(w);
+            if (!w.Map.Passable(x, y) || w.S.Occ[y * w.W + x] != 0) return false;
+            AddFresh(w, (byte)seat, program, Math.Max(1, Math.Min(Rules.MaxTier, tier)), x, y);
+            return true;
+        }
+
         static void AddFresh(World w, byte seat, uint program, int tier, int x, int y)
         {
             var m = new Mote
@@ -826,7 +835,8 @@ namespace Argmax.Sim
         static void Ferals(World w, StepLog log)
         {
             bool on = w.Mode == WorldMode.Duel || (w.Chamber != null && w.Chamber.Ferals);
-            if (!on || w.Tick % Rules.WellEvery != Rules.WellEvery / 2 || w.Map.Wells.Count == 0) return;
+            int every = w.Chamber != null && w.Chamber.WellEvery > 0 ? w.Chamber.WellEvery : Rules.WellEvery;
+            if (!on || w.Tick % every != every / 2 || w.Map.Wells.Count == 0) return;
             int ferals = 0;
             for (int i = 0; i < w.MoteCount; i++) if (w.Motes[i].Seat == Rules.NoiseSeat) ferals++;
             int cap = w.Chamber != null ? w.Chamber.MaxFerals : Rules.MaxFerals;
@@ -847,7 +857,8 @@ namespace Argmax.Sim
                         if (w.Map.Passable(x, y) && w.S.Occ[w.Map.Idx(x, y)] == 0) cell = w.Map.Idx(x, y);
                     }
                 if (cell < 0) continue;
-                AddFresh(w, Rules.NoiseSeat, Rules.FeralProgramBase + roll / 7 % (uint)Rules.FeralPrograms, tier, cell % w.W, cell / w.W);
+                uint feral = w.Chamber != null && w.Chamber.FeralProgram != 0 ? w.Chamber.FeralProgram : Rules.FeralProgramBase + roll / 7 % (uint)Rules.FeralPrograms;
+                AddFresh(w, Rules.NoiseSeat, feral, tier, cell % w.W, cell / w.W);
                 ferals++;
                 log?.Spawns.Add(cell | (Rules.NoiseSeat << 12));
             }

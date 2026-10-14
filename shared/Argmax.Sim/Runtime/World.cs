@@ -145,7 +145,10 @@ namespace Argmax.Sim
         public byte[][] Trails = new byte[2][];
         public readonly Dictionary<uint, Program> Programs = new Dictionary<uint, Program>();
         public ChamberSpec Chamber;
-        public int ChamberProgress;
+        public int ChamberProgress, ChamberProgress2;
+        public int ChamberHeld;          // consecutive ticks the goals have been met (HoldTicks levels)
+        public int ChamberTarget, ChamberTarget2;
+        public string ChamberReason;
 
         public bool Ended => Winner != Rules.NoWinner;
         public int W => Map.W;
@@ -217,7 +220,8 @@ namespace Argmax.Sim
             var w = new World(Map)
             {
                 Seed = Seed, Mode = Mode, Tick = Tick, NextId = NextId, Winner = Winner,
-                MoteCount = MoteCount, Chamber = Chamber, ChamberProgress = ChamberProgress,
+                MoteCount = MoteCount, Chamber = Chamber, ChamberProgress = ChamberProgress, ChamberProgress2 = ChamberProgress2,
+                ChamberTarget = ChamberTarget, ChamberTarget2 = ChamberTarget2, ChamberReason = ChamberReason, ChamberHeld = ChamberHeld,
             };
             w.Motes = (Mote[])Motes.Clone();
             for (int i = 0; i < Seats.Length; i++) w.Seats[i] = Seats[i].Clone();
