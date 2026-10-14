@@ -1,0 +1,8 @@
+{
+  "name": "com.argmax.sim",
+  "version": "0.1.0",
+  "displayName": "ARGMAX Sim",
+  "description": "Deterministic integer swarm simulation. The same source compiles into the SpacetimeDB module, the Unity client and the ML-Agents gym.",
+  "unity": "6000.0",
+  "author": { "name": "ARGMAX" }
+}

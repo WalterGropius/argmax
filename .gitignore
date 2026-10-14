@@ -1,0 +1,31 @@
+# secrets
+.env.local
+*.key
+
+# unity
+client/[Ll]ibrary/
+client/[Tt]emp/
+client/[Oo]bj/
+client/[Bb]uild/
+client/[Bb]uilds/
+client/[Ll]ogs/
+client/[Uu]ser[Ss]ettings/
+client/*.csproj
+client/*.sln
+client/.vs/
+client/.idea/
+
+# dotnet
+**/bin/
+**/obj/
+
+# ml-agents
+ml/results/
+ml/.venv/
+logs/
+
+# local SpacetimeDB data
+.stdb-local/
+
+# editor / agent local config
+.claude/

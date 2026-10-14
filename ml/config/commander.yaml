@@ -1,0 +1,57 @@
+# ARGMAX commander: PPO self-play over the shared deterministic simulation.
+# Observation: CommanderObs (303 floats: economy, armies, threats, 8x8 value maps, metaprogram sensors).
+# Actions: 4 discrete branches = MetaDecision {produce 7, spawn 4, beacon 7, army 7}: the same interface
+# Argot metaprograms and Jev use, so a trained policy can replace any of them.
+#
+#   mlagents-learn ml/config/commander.yaml --run-id=argmax-v1
+#   then press GYM in the game (or run scripts/train.sh for a headless editor session)
+behaviors:
+  Commander:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 512
+      buffer_size: 10240
+      learning_rate: 3.0e-4
+      beta: 5.0e-3
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: false
+      hidden_units: 256
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.995
+        strength: 1.0
+      # active-inference flavoured exploration; costs compute, try it once the baseline learns
+      # curiosity:
+      #   gamma: 0.99
+      #   strength: 0.02
+      #   encoding_size: 128
+      #   learning_rate: 3.0e-4
+    keep_checkpoints: 5
+    checkpoint_interval: 50000
+    max_steps: 3000000
+    time_horizon: 256
+    summary_freq: 5000
+    self_play:
+      save_steps: 20000
+      team_change: 100000
+      swap_steps: 5000
+      window: 10
+      play_against_latest_model_ratio: 0.5
+      initial_elo: 1200.0
+    # bootstrap from OVERMIND demonstrations recorded in the gym (optional)
+    # behavioral_cloning:
+    #   demo_path: ml/demos/overmind.demo
+    #   strength: 0.5
+    #   steps: 150000
+
+engine_settings:
+  no_graphics: true
+  time_scale: 20
+
+torch_settings:
+  device: cpu

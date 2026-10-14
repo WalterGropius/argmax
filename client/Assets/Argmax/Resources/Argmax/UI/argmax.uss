@@ -1,0 +1,130 @@
+/* ARGMAX: Uplink-style terminal chrome over a neon swarm. */
+
+.root { flex-grow: 1; color: rgb(200, 236, 245); font-size: 13px; }
+.screen { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.hidden { display: none; }
+
+.panel {
+    background-color: rgba(3, 8, 14, 0.86);
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.35);
+    border-radius: 3px;
+    padding: 8px 10px;
+}
+.panel-title { color: rgb(0, 229, 255); -unity-font-style: bold; font-size: 12px; letter-spacing: 2px; margin-bottom: 6px; }
+.dim { color: rgba(170, 210, 225, 0.55); }
+.hot { color: rgb(255, 46, 112); }
+.good { color: rgb(158, 255, 59); }
+.amber { color: rgb(255, 176, 0); }
+.row { flex-direction: row; align-items: center; }
+.grow { flex-grow: 1; }
+.mono { -unity-font-style: normal; }
+
+/* ---------- menu ---------- */
+.menu { align-items: center; justify-content: center; background-color: rgba(1, 3, 6, 0.55); }
+.menu-box { width: 760px; max-width: 96%; }
+.logo { font-size: 64px; color: rgb(0, 229, 255); -unity-font-style: bold; letter-spacing: 18px; -unity-text-align: middle-center; margin-bottom: 0; }
+.tagline { -unity-text-align: middle-center; color: rgba(200, 236, 245, 0.7); margin-bottom: 14px; letter-spacing: 1px; }
+.menu-grid { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+.menu-card { width: 49%; margin-bottom: 8px; }
+.menu-card .panel-title { margin-bottom: 2px; }
+.menu-card Label { white-space: normal; }
+
+.btn {
+    background-color: rgba(0, 229, 255, 0.08);
+    border-width: 1px;
+    border-color: rgba(0, 229, 255, 0.55);
+    border-radius: 2px;
+    color: rgb(210, 250, 255);
+    padding: 5px 10px;
+    margin: 3px 4px 3px 0;
+    -unity-font-style: bold;
+    transition-duration: 0.08s;
+}
+.btn:hover { background-color: rgba(0, 229, 255, 0.25); border-color: rgb(0, 229, 255); }
+.btn:active { background-color: rgba(0, 229, 255, 0.45); }
+.btn-hot { border-color: rgba(255, 46, 112, 0.7); background-color: rgba(255, 46, 112, 0.1); }
+.btn-hot:hover { background-color: rgba(255, 46, 112, 0.3); border-color: rgb(255, 46, 112); }
+.btn-on { background-color: rgba(0, 229, 255, 0.35); border-color: rgb(0, 229, 255); }
+.btn-small { padding: 2px 6px; font-size: 11px; }
+
+TextField { margin: 2px 4px 2px 0; }
+TextField > .unity-text-field__input, TextField .unity-base-text-field__input {
+    background-color: rgba(0, 12, 20, 0.9);
+    border-color: rgba(0, 229, 255, 0.35);
+    color: rgb(210, 250, 255);
+}
+.field-label { width: 70px; color: rgba(170, 210, 225, 0.7); }
+
+/* ---------- hud ---------- */
+.topbar { position: absolute; left: 10px; right: 10px; top: 8px; flex-direction: row; align-items: center; padding: 6px 10px; }
+.stat { margin-right: 18px; }
+.stat-k { color: rgba(170, 210, 225, 0.55); font-size: 10px; letter-spacing: 1px; }
+.stat-v { font-size: 16px; -unity-font-style: bold; }
+.bar { height: 6px; width: 120px; background-color: rgba(255, 255, 255, 0.08); border-radius: 2px; margin-top: 2px; }
+.bar-fill { height: 6px; border-radius: 2px; background-color: rgb(0, 229, 255); }
+.bar-foe .bar-fill { background-color: rgb(255, 46, 112); }
+
+.terminal { position: absolute; right: 10px; top: 64px; width: 380px; max-height: 46%; }
+.terminal-line { white-space: normal; font-size: 12px; margin-bottom: 2px; }
+.inspector { position: absolute; right: 10px; bottom: 120px; width: 380px; }
+.jev-grid { flex-direction: row; flex-wrap: wrap; width: 156px; margin-right: 10px; }
+.jev-cell {
+    width: 50px; height: 34px; margin: 1px;
+    background-color: rgba(0, 229, 255, 0.05);
+    border-width: 1px; border-color: rgba(0, 229, 255, 0.18);
+    -unity-text-align: middle-center; font-size: 11px;
+}
+.jev-pick { border-color: rgb(255, 255, 255); }
+.rule-line { font-size: 11px; white-space: normal; }
+.rule-fired { color: rgb(0, 229, 255); }
+.rule-idle { color: rgba(170, 210, 225, 0.35); }
+
+.bottombar { position: absolute; left: 10px; right: 400px; bottom: 8px; padding: 6px 10px; }
+.slot {
+    width: 118px; padding: 4px 6px; margin-right: 4px;
+    background-color: rgba(0, 229, 255, 0.05);
+    border-width: 1px; border-color: rgba(0, 229, 255, 0.25); border-radius: 2px;
+}
+.slot:hover { border-color: rgb(0, 229, 255); }
+.slot-active { background-color: rgba(0, 229, 255, 0.22); border-color: rgb(0, 229, 255); }
+.slot-key { color: rgb(255, 176, 0); font-size: 10px; }
+.slot-name { -unity-font-style: bold; font-size: 12px; }
+.slot-cost { font-size: 10px; color: rgba(170, 210, 225, 0.6); }
+.hint { font-size: 11px; color: rgba(170, 210, 225, 0.5); margin-top: 4px; white-space: normal; }
+.banner { position: absolute; top: 64px; left: 30%; right: 30%; -unity-text-align: middle-center; font-size: 18px; color: rgb(255, 176, 0); -unity-font-style: bold; }
+
+/* ---------- editor ---------- */
+.editor { position: absolute; left: 10px; top: 64px; width: 560px; bottom: 120px; }
+.code {
+    flex-grow: 1;
+    font-size: 14px;
+    white-space: normal;
+}
+.code > .unity-text-field__input, .code .unity-base-text-field__input {
+    -unity-text-align: upper-left;
+    background-color: rgba(0, 8, 14, 0.95);
+    color: rgb(158, 255, 59);
+    padding: 8px;
+    white-space: normal;
+}
+.compile-ok { color: rgb(158, 255, 59); white-space: normal; }
+.compile-err { color: rgb(255, 46, 112); white-space: normal; }
+.lib-item { padding: 2px 4px; }
+.lib-item:hover { background-color: rgba(0, 229, 255, 0.12); }
+.ref { font-size: 11px; color: rgba(170, 210, 225, 0.6); white-space: normal; }
+
+/* ---------- chambers ---------- */
+.chamber-list { width: 300px; margin-right: 10px; }
+.chamber-item { padding: 6px; margin-bottom: 4px; border-width: 1px; border-color: rgba(0, 229, 255, 0.15); }
+.chamber-item:hover { border-color: rgb(0, 229, 255); }
+.chamber-on { border-color: rgb(255, 176, 0); background-color: rgba(255, 176, 0, 0.08); }
+.proctor { color: rgb(255, 176, 0); white-space: normal; margin-bottom: 3px; }
+
+/* ---------- overlays ---------- */
+.endgame { align-items: center; justify-content: center; background-color: rgba(0, 0, 0, 0.55); }
+.endgame-title { font-size: 72px; letter-spacing: 16px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.toast { position: absolute; bottom: 120px; left: 25%; right: 25%; -unity-text-align: middle-center; color: rgb(210, 250, 255); }
+.select-rect { position: absolute; border-width: 1px; border-color: rgba(0, 229, 255, 0.9); background-color: rgba(0, 229, 255, 0.08); }
+.world-label { color: white; -unity-font-style: bold; -unity-text-align: middle-center; font-size: 12px; }
+.cursor-hint { position: absolute; color: rgb(255, 176, 0); font-size: 12px; }
